@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info
+dist/
+build/
+*.pyc
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+watcher.db
+
+# ChromaDB vector store
+chroma_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Test files (optional - uncomment if you don't want to commit test files)
+# test_*.py
+
+# Logs
+*.log
+
+# Generated reports and exports
+watch_report_demo.md
+watch_report_demo.pdf
+watch_report_demo.docx
+synthesis_output.pdf
+reports/
+scheduler.log
+synthesis_output.docx
+*.pdf
+*.docx
+
+# Environment variables
+.env
+.env.local
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Cache
+.cache/
+*.cache

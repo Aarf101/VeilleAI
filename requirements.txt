@@ -1,0 +1,21 @@
+feedparser>=6.0.8
+PyYAML>=6.0
+requests>=2.28
+beautifulsoup4>=4.12
+lxml>=4.9
+sqlite-utils>=3.32
+apscheduler>=3.10
+# Open-source ML stack
+sentence-transformers>=2.2.2
+chromadb>=0.3.28
+transformers>=4.40.0
+accelerate>=0.22.0
+torch>=2.2.0; platform_system != "Darwin"
+# LangChain multi-agent framework
+langchain>=0.1.0
+langchain-groq>=0.1.0
+langchain-core>=0.1.0
+# Optional UI/export
+streamlit>=1.20
+reportlab>=4.0
+python-docx>=0.8.11

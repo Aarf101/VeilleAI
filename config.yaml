@@ -1,0 +1,42 @@
+database: watcher.db
+feeds:
+- https://www.artificialintelligence-news.com/feed/
+- https://venturebeat.com/category/ai/feed/
+- https://techcrunch.com/category/artificial-intelligence/feed/
+- https://www.technologyreview.com/feed/
+- https://arxiv.org/rss/cs.AI
+- https://towardsdatascience.com/feed
+- https://blog.openai.com/rss/
+- https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
+- https://blog.google/technology/ai/rss/
+- https://www.deeplearning.ai/feed/
+- https://huggingface.co/blog/feed.xml
+- https://aws.amazon.com/blogs/machine-learning/feed/
+- https://cloud.google.com/blog/products/ai-machine-learning/rss
+- https://www.microsoft.com/en-us/research/feed/
+- https://machinelearningmastery.com/feed/
+- https://www.kdnuggets.com/feed
+- https://blog.research.google/feeds/posts/default
+- https://openai.com/blog/rss/
+apis: []
+max_items_per_feed: 5  # Focus on top articles per source (quality over quantity)
+run_every_minutes: 15
+topics:
+- artificial intelligence
+- machine learning
+- software development
+- programming
+- technology innovation
+- technology
+- AI
+- tech news
+- startups
+filter_threshold: 0.15  # Lower for more rich content (was 0.3, originally 0.2)
+use_api_llm: true
+api_provider: gemini  # Options: groq, gemini, ollama, together, huggingface
+api_model: gemini-2.5-flash  # Hybrid reasoning model - 1M context, now with 4096 token output
+use_llm: false
+synthesizer_model: google/flan-t5-base
+synthesizer_task: text2text-generation
+synthesizer_max_new_tokens: 512
+chroma_persist_dir: chroma_data
