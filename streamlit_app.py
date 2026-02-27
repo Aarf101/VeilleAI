@@ -70,7 +70,7 @@ html, body, [class*="css"] {
 .vi-wordmark {
     font-size: 1.6rem;
     font-weight: 700;
-    color: #111827;
+    color: #2563eb;
     letter-spacing: -0.02em;
     margin: 0;
 }
@@ -420,7 +420,7 @@ if page == "Dashboard":
 # PAGE 2: RUN PIPELINE
 # ============================================================================
 elif page == "Run Pipeline":
-    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Run Pipeline</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Run Pipeline</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Execute the full multi-agent collection, filtering, and synthesis workflow.</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns([2, 1])
@@ -534,7 +534,7 @@ elif page == "Run Pipeline":
 # PAGE 3: SCHEDULER MANAGEMENT
 # ============================================================================
 elif page == "Scheduler":
-    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Scheduler</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Scheduler</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Start, stop, and monitor the automatic pipeline scheduler.</p>', unsafe_allow_html=True)
 
     def check_scheduler_running():
@@ -643,7 +643,7 @@ sudo systemctl start agenticnotes-scheduler""", language="bash")
 # PAGE 4: TOPICS MANAGEMENT
 # ============================================================================
 elif page == "Topics":
-    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Topics</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Topics</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Define what subjects the system monitors and filters by.</p>', unsafe_allow_html=True)
 
     topics = st.session_state.config.get('topics', [])
@@ -706,7 +706,7 @@ elif page == "Data Sources":
     st.header("Data Source Configuration")
     st.markdown("_Manage RSS feeds and API sources_")
     
-    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Data Sources</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Data Sources</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Manage RSS feeds and collection parameters.</p>', unsafe_allow_html=True)
 
     feeds = st.session_state.config.get('feeds', [])
@@ -782,7 +782,7 @@ elif page == "Data Sources":
 # PAGE 4: ADVANCED SETTINGS
 # ============================================================================
 elif page == "Advanced":
-    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Advanced</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Advanced</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Fine-tune the LLM, filtering, scheduling, and storage settings.</p>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
@@ -867,7 +867,7 @@ elif page == "Advanced":
 # PAGE 5: MONITORING
 # ============================================================================
 elif page == "Monitoring":
-    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Monitoring</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Monitoring</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Inspect collected data and system health.</p>', unsafe_allow_html=True)
 
     earliest_str = stats['earliest'][:10] if stats['earliest'] else "—"
