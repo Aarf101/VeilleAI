@@ -118,7 +118,8 @@ class APILLMAdapter:
                 )
         
         self.base_url = provider_info['url']
-        self.timeout = timeout
+        # Gemini needs more time for large reports
+        self.timeout = 90 if self.provider == 'gemini' else timeout
         
         # Import requests
         try:

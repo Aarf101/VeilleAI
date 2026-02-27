@@ -20,33 +20,195 @@ import glob
 
 # Page config
 st.set_page_config(
-    page_title="Veille Config",
-    page_icon="⚙️",
+    page_title="Veille Intelligence",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Styling
+# ── Global styles ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .config-section {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    .success-box {
-        background-color: #d4edda;
-        padding: 10px;
-        border-radius: 5px;
-        color: #155724;
-    }
-    .warning-box {
-        background-color: #fff3cd;
-        padding: 10px;
-        border-radius: 5px;
-        color: #856404;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: #0d1117 !important;
+    border-right: 1px solid #21262d;
+}
+[data-testid="stSidebar"] * {
+    color: #c9d1d9 !important;
+}
+[data-testid="stSidebar"] .stRadio label {
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] > div > label:has(input:checked) {
+    background: #1f2937 !important;
+    border-radius: 6px;
+    color: #58a6ff !important;
+    font-weight: 600;
+}
+[data-testid="stSidebar"] p {
+    color: #8b949e !important;
+    font-size: 0.78rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px !important;
+}
+
+/* ── Main header ── */
+.vi-header {
+    padding: 28px 0 20px 0;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 28px;
+}
+.vi-wordmark {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+.vi-sub {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin: 2px 0 0 2px;
+    font-weight: 400;
+}
+.vi-status-bar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 6px;
+}
+.vi-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+}
+.vi-pill-blue  { background: #eff6ff; color: #2563eb; }
+.vi-pill-green { background: #f0fdf4; color: #16a34a; }
+.vi-pill-gray  { background: #f3f4f6; color: #6b7280; }
+
+/* ── Stat cards ── */
+.stat-row { display: flex; gap: 16px; margin: 0 0 24px 0; }
+.stat-card {
+    flex: 1;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.stat-card .label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 8px;
+}
+.stat-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+}
+.stat-card .sub { font-size: 0.78rem; color: #6b7280; margin-top: 4px; }
+
+/* ── Section containers ── */
+.section-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #374151;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+/* ── Status badge ── */
+.badge { display:inline-block; font-size:0.75rem; font-weight:600;
+         padding:3px 10px; border-radius:14px; letter-spacing:0.02em; }
+.badge-green  { background:#dcfce7; color:#166534; }
+.badge-red    { background:#fee2e2; color:#991b1b; }
+.badge-orange { background:#ffedd5; color:#9a3412; }
+.badge-blue   { background:#dbeafe; color:#1e40af; }
+
+/* ── Feed / topic list rows ── */
+.list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #f9fafb;
+    margin-bottom: 6px;
+    border: 1px solid #f3f4f6;
+    font-size: 0.88rem;
+    color: #374151;
+    word-break: break-all;
+}
+
+/* ── Inline alert banners ── */
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    margin: 12px 0;
+    font-weight: 400;
+}
+.alert-info    { background:#eff6ff; border-left:3px solid #3b82f6; color:#1e40af; }
+.alert-warn    { background:#fffbeb; border-left:3px solid #f59e0b; color:#92400e; }
+.alert-success { background:#f0fdf4; border-left:3px solid #22c55e; color:#166534; }
+.alert-error   { background:#fef2f2; border-left:3px solid #ef4444; color:#991b1b; }
+
+/* ── Report expander polish ── */
+details summary { font-weight: 500; color: #374151; }
+
+/* ── Button sizing tweak ── */
+[data-testid="stButton"] > button {
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    letter-spacing: 0.01em !important;
+}
+[data-testid="stButton"] > button[kind="primary"] {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+}
+[data-testid="stButton"] > button[kind="primary"]:hover {
+    background: #1d4ed8 !important;
+}
+
+/* ── Metric label smaller ── */
+[data-testid="stMetricLabel"] { font-size: 0.75rem !important; }
+
+/* ── Remove default top padding ── */
+.block-container { padding-top: 1.5rem !important; }
+
+/* ── Log code block ── */
+.stCodeBlock { border-radius: 8px; }
+
+/* ── Divider refinement ── */
+hr { border-color: #f3f4f6 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -63,6 +225,7 @@ def load_config_file(path: str = "config.yaml") -> Dict:
         'apis': [],
         'topics': [],
         'max_items_per_feed': 10,
+        'max_synthesis_items': 25,
         'run_every_minutes': 1440,
         'use_api_llm': True,
         'api_provider': 'groq',
@@ -76,7 +239,7 @@ def save_config_file(config: Dict, path: str = "config.yaml"):
     """Save configuration to YAML file."""
     with open(path, 'w') as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-    st.success("✅ Configuration saved!")
+    st.success("Configuration saved.")
 
 
 def get_db_stats() -> Dict[str, Any]:
@@ -108,623 +271,480 @@ def get_db_stats() -> Dict[str, Any]:
 if 'config' not in st.session_state:
     st.session_state.config = load_config_file()
 
-# Header
-col1, col2 = st.columns([0.7, 0.3])
-with col1:
-    st.title("⚙️ Veille Configuration")
-    st.markdown("_Automated AI Monitoring System_")
-with col2:
-    st.markdown("### Status")
-    stats = get_db_stats()
-    st.metric("Items Collected", stats['items'])
-    st.metric("Sources", stats['sources'])
+stats = get_db_stats()
 
-st.divider()
+# ── Header ────────────────────────────────────────────────────────────────────
+provider = st.session_state.config.get('api_provider', 'groq').upper()
+model    = st.session_state.config.get('api_model', '—')
+feeds_n  = len(st.session_state.config.get('feeds', []))
 
-# Sidebar navigation
+st.markdown(f"""
+<div class="vi-header">
+  <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+    <div>
+      <p class="vi-wordmark">Veille Intelligence</p>
+      <p class="vi-sub">Automated AI monitoring &amp; synthesis</p>
+    </div>
+    <div class="vi-status-bar">
+      <span class="vi-pill vi-pill-blue">{provider} &middot; {model}</span>
+      <span class="vi-pill vi-pill-green">{stats['items']:,} articles</span>
+      <span class="vi-pill vi-pill-gray">{feeds_n} feeds</span>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Sidebar ────────────────────────────────────────────────────────────────────
+st.sidebar.markdown("<p style='margin-top:8px'>Navigation</p>", unsafe_allow_html=True)
 page = st.sidebar.radio(
-    "Configuration Sections",
-    ["📊 Dashboard", "▶️ Run Pipeline", "⏰ Scheduler", "🎯 Topics", "📡 Data Sources", "🔧 Advanced", "📈 Monitoring"]
+    "",
+    ["Dashboard", "Run Pipeline", "Scheduler", "Topics", "Data Sources", "Advanced", "Monitoring"],
+    label_visibility="collapsed"
 )
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"""
+<div style="font-size:0.75rem; color:#8b949e; line-height:1.8;">
+  <div style="margin-bottom:4px; font-weight:600; color:#6e7681; text-transform:uppercase; letter-spacing:.07em; font-size:.68rem;">System</div>
+  <div>DB &nbsp;&nbsp;&nbsp; {'watcher.db' if not Path('watcher.db').exists() else '<span style="color:#3fb950">connected</span>'}</div>
+  <div>Sources &nbsp; {stats['sources']}</div>
+  <div>Topics &nbsp;&nbsp; {len(st.session_state.config.get('topics', []))}</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ============================================================================
 # PAGE 1: DASHBOARD
 # ============================================================================
-if page == "📊 Dashboard":
-    st.header("System Overview")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Items", stats['items'])
-    with col2:
-        st.metric("Data Sources", stats['sources'])
-    with col3:
-        st.metric("Topics Monitored", len(st.session_state.config.get('topics', [])))
-    with col4:
-        st.metric("Feeds Configured", len(st.session_state.config.get('feeds', [])))
-    
-    st.divider()
-    
-    st.subheader("Current Configuration")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**Topics:**")
-        for topic in st.session_state.config.get('topics', []):
-            st.write(f"- {topic}")
-    
-    with col2:
-        st.write("**Feed URLs:**")
-        for feed in st.session_state.config.get('feeds', []):
-            st.write(f"- {feed}")
-    
-    st.divider()
-    
-    st.subheader("Quick Actions")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("▶️ Run Full Pipeline", use_container_width=True, type="primary"):
-            st.switch_page = "▶️ Run Pipeline"
-            st.info("👉 Switch to 'Run Pipeline' page to execute the system")
-    
-    with col2:
-        if st.button("⏰ Start Background Scheduler", use_container_width=True):
-            st.info(f"""
-**To run scheduler in background:**
+if page == "Dashboard":
+    # Stat cards row
+    topics_n = len(st.session_state.config.get('topics', []))
+    st.markdown(f"""
+<div class="stat-row">
+  <div class="stat-card">
+    <div class="label">Total Articles</div>
+    <div class="value">{stats['items']:,}</div>
+    <div class="sub">in database</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Active Sources</div>
+    <div class="value">{stats['sources']}</div>
+    <div class="sub">unique origins</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Topics</div>
+    <div class="value">{topics_n}</div>
+    <div class="sub">monitored</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">RSS Feeds</div>
+    <div class="value">{feeds_n}</div>
+    <div class="sub">configured</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-```bash
-# Option 1: Using APScheduler (recommended)
-source load_env.sh
-python3 -c "from watcher.scheduler import start_scheduler; start_scheduler()" &
-
-# Option 2: Simple scheduler  
-python3 scheduler_agent.py &
-```
-
-The scheduler will run the pipeline every {st.session_state.config.get('run_every_minutes', 1440)} minutes.
-Check with: `ps aux | grep scheduler`
-            """)
-    
-    st.divider()
-    
+    # Two column config overview
     col1, col2 = st.columns(2)
+
     with col1:
-        if st.button("📝 View Latest Report", use_container_width=True):
-            if Path("watch_report_demo.md").exists():
-                with open("watch_report_demo.md", 'r') as f:
-                    st.markdown(f.read())
+        st.markdown('<div class="section-card"><div class="section-title">Monitored Topics</div>', unsafe_allow_html=True)
+        topics = st.session_state.config.get('topics', [])
+        if topics:
+            pills = " ".join(f'<span class="badge badge-blue" style="margin:2px">{t}</span>' for t in topics)
+            st.markdown(pills, unsafe_allow_html=True)
+        else:
+            st.markdown('<span style="color:#9ca3af; font-size:.875rem">No topics configured yet.</span>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="section-card"><div class="section-title">Quick Actions</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("Run Full Pipeline", use_container_width=True, type="primary"):
+            st.info("Switch to 'Run Pipeline' in the sidebar to execute the system.")
+        if st.button("Check Scheduler Status", use_container_width=True):
+            result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
+            running = "start_scheduler" in result.stdout
+            if running:
+                st.markdown('<div class="alert alert-success">Scheduler is active and running in the background.</div>', unsafe_allow_html=True)
             else:
-                st.warning("No report found. Run the pipeline first.")
-    
-    with col2:
-        if st.button("🔍 Check Scheduler Status", use_container_width=True):
-            import subprocess
-            result = subprocess.run(
-                ["ps", "aux"], 
-                capture_output=True, 
-                text=True
-            )
-            scheduler_running = "scheduler" in result.stdout or "APScheduler" in result.stdout
-            
-            if scheduler_running:
-                st.success("✅ Scheduler is running")
-            else:
-                st.warning("⚠️ Scheduler is NOT running - start it manually")
-    
-    # Historical reports section
-    st.divider()
-    st.subheader("📚 Historical Reports")
-    
+                st.markdown('<div class="alert alert-warn">Scheduler is not running. Go to the Scheduler page to start it.</div>', unsafe_allow_html=True)
+
+    # Historical reports
+    st.markdown('<div class="section-card"><div class="section-title">Intelligence Reports</div>', unsafe_allow_html=True)
     reports_dir = Path("reports")
     if reports_dir.exists():
-        # Find all timestamped reports
         report_files = sorted(glob.glob(str(reports_dir / "intelligence_report_*.md")), reverse=True)
-        
         if report_files:
-            st.info(f"Found {len(report_files)} archived reports")
-            
-            # Display reports in expandable sections
-            for report_file in report_files[:10]:  # Show last 10 reports
+            st.markdown(f'<div class="alert alert-info">{len(report_files)} archived reports found.</div>', unsafe_allow_html=True)
+            for report_file in report_files[:10]:
                 report_path = Path(report_file)
                 timestamp = report_path.stem.replace("intelligence_report_", "")
-                
-                # Parse timestamp for display
                 try:
                     dt = datetime.strptime(timestamp, "%Y%m%d_%H%M%S")
-                    display_time = dt.strftime("%B %d, %Y at %I:%M:%S %p")
+                    display_time = dt.strftime("%b %d, %Y — %H:%M")
                 except:
                     display_time = timestamp
-                
-                with st.expander(f"📄 Report from {display_time}"):
+
+                with st.expander(display_time):
                     with open(report_file, 'r') as f:
                         st.markdown(f.read())
-                    
-                    # Download buttons for this report
-                    col1, col2, col3 = st.columns(3)
-                    
                     base_name = report_path.stem
-                    pdf_file = reports_dir / f"{base_name}.pdf"
+                    pdf_file  = reports_dir / f"{base_name}.pdf"
                     docx_file = reports_dir / f"{base_name}.docx"
-                    
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         with open(report_file, 'r') as f:
-                            st.download_button(
-                                "📄 Markdown",
-                                data=f.read(),
-                                file_name=f"{base_name}.md",
-                                mime="text/markdown",
-                                key=f"md_{timestamp}"
-                            )
-                    
+                            st.download_button("Download Markdown", data=f.read(),
+                                file_name=f"{base_name}.md", mime="text/markdown",
+                                key=f"md_{timestamp}", use_container_width=True)
                     with col2:
                         if pdf_file.exists():
                             with open(pdf_file, 'rb') as f:
-                                st.download_button(
-                                    "📕 PDF",
-                                    data=f.read(),
-                                    file_name=f"{base_name}.pdf",
-                                    mime="application/pdf",
-                                    key=f"pdf_{timestamp}"
-                                )
-                    
+                                st.download_button("Download PDF", data=f.read(),
+                                    file_name=f"{base_name}.pdf", mime="application/pdf",
+                                    key=f"pdf_{timestamp}", use_container_width=True)
                     with col3:
                         if docx_file.exists():
                             with open(docx_file, 'rb') as f:
-                                st.download_button(
-                                    "📘 Word",
-                                    data=f.read(),
+                                st.download_button("Download Word", data=f.read(),
                                     file_name=f"{base_name}.docx",
                                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                    key=f"docx_{timestamp}"
-                                )
+                                    key=f"docx_{timestamp}", use_container_width=True)
         else:
-            st.info("No archived reports yet. Reports will appear here after pipeline runs.")
+            st.markdown('<span style="color:#9ca3af; font-size:.875rem">No reports yet. Run the pipeline to generate the first one.</span>', unsafe_allow_html=True)
     else:
-        st.info("No reports folder found. Run the pipeline to generate reports.")
+        st.markdown('<span style="color:#9ca3af; font-size:.875rem">Reports folder not found. Run the pipeline to get started.</span>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ============================================================================
 # PAGE 2: RUN PIPELINE
 # ============================================================================
-elif page == "▶️ Run Pipeline":
-    st.header("Execute Pipeline")
-    st.markdown("_Run the complete multi-agent workflow from this interface_")
-    
-    st.divider()
-    
-    # Pipeline configuration
-    st.subheader("Pipeline Settings")
-    
-    col1, col2 = st.columns(2)
+elif page == "Run Pipeline":
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Run Pipeline</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Execute the full multi-agent collection, filtering, and synthesis workflow.</p>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns([2, 1])
     with col1:
-        clear_db = st.checkbox("Clear database before running", value=False, 
-                              help="Remove old data to re-collect everything fresh")
+        st.markdown('<div class="section-card"><div class="section-title">Collection Mode</div>', unsafe_allow_html=True)
+        refresh_mode = st.radio(
+            "",
+            options=["Clear old (>7 days)", "Fresh start (clear all)", "Keep existing"],
+            index=0,
+            help="'Clear old' removes stale articles so new ones are collected",
+            label_visibility="collapsed"
+        )
+        if refresh_mode == "Clear old (>7 days)":
+            st.markdown('<div class="alert alert-info">Articles older than 7 days will be removed before collecting new ones.</div>', unsafe_allow_html=True)
+        elif refresh_mode == "Fresh start (clear all)":
+            st.markdown('<div class="alert alert-warn">All existing articles will be deleted. A full re-collection will happen.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="alert alert-warn">Existing articles are kept. You may get 0 new items if feeds were recently collected.</div>', unsafe_allow_html=True)
+        show_logs = st.checkbox("Show pipeline output logs", value=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with col2:
-        show_logs = st.checkbox("Show detailed logs", value=True)
-    
-    st.divider()
-    
-    # Run button
-    if st.button("▶️ START PIPELINE", type="primary", use_container_width=True):
-        import subprocess
+        st.markdown('<div class="section-card"><div class="section-title">System Check</div>', unsafe_allow_html=True)
+        api_key_set   = Path(".env").exists() and "GROQ_API_KEY" in open(".env").read() or \
+                        Path(".env").exists() and "GEMINI_API_KEY" in open(".env").read()
+        db_exists     = Path("watcher.db").exists()
+        config_valid  = len(st.session_state.config.get('feeds', [])) > 0
+        api_status    = '<span class="badge badge-green">Set</span>' if api_key_set else '<span class="badge badge-red">Missing</span>'
+        db_status     = '<span class="badge badge-green">Ready</span>' if db_exists else '<span class="badge badge-gray">Not found</span>'
+        feed_status   = '<span class="badge badge-green">Configured</span>' if config_valid else '<span class="badge badge-orange">None</span>'
+        st.markdown(f"""
+<div style="font-size:0.85rem;line-height:2.2;color:#374151;">
+  <div style="display:flex;justify-content:space-between"><span>API Key</span>{api_status}</div>
+  <div style="display:flex;justify-content:space-between"><span>Database</span>{db_status}</div>
+  <div style="display:flex;justify-content:space-between"><span>RSS Feeds</span>{feed_status}</div>
+</div>
+""", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Run Pipeline", type="primary", use_container_width=True):
         import os
-        
-        with st.spinner("Running pipeline..."):
-            # Prepare command
-            if clear_db and Path("watcher.db").exists():
-                os.remove("watcher.db")
-                st.success("✅ Database cleared")
-            
-            # Run pipeline
+        with st.spinner("Running pipeline — this may take 1-2 minutes..."):
+            cmd = ["python3", "run_full_pipeline.py"]
+            if refresh_mode == "Clear old (>7 days)":
+                cmd.append("--clear-old")
+            elif refresh_mode == "Fresh start (clear all)":
+                cmd.append("--fresh")
             try:
                 env = os.environ.copy()
-                # Load .env file
                 if Path(".env").exists():
                     with open(".env") as f:
                         for line in f:
                             if line.strip() and not line.startswith('#'):
                                 key, value = line.strip().split('=', 1)
                                 env[key] = value
-                
-                result = subprocess.run(
-                    ["python3", "run_full_pipeline.py"],
-                    capture_output=True,
-                    text=True,
-                    env=env,
-                    timeout=300
-                )
-                
+                result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=300)
+
                 if result.returncode == 0:
-                    st.success("✅ Pipeline completed successfully!")
-                    
+                    st.markdown('<div class="alert alert-success">Pipeline completed successfully.</div>', unsafe_allow_html=True)
                     if show_logs:
-                        st.subheader("Pipeline Output")
-                        st.code(result.stdout, language="text")
-                    
-                    # Show results
-                    st.divider()
-                    st.subheader("📊 Results")
-                    
-                    # Parse output for stats
+                        with st.expander("Pipeline output"):
+                            st.code(result.stdout, language="text")
+
                     lines = result.stdout.split('\n')
+                    c1, c2 = st.columns(2)
                     for line in lines:
                         if 'Collected:' in line:
-                            st.metric("Items Collected", line.split(':')[1].strip().split()[0])
+                            c1.metric("Items Collected", line.split(':')[1].strip().split()[0])
                         if 'Filtered:' in line:
-                            st.metric("Items Filtered", line.split(':')[1].strip().split()[0])
-                    
-                    # Show report
-                    if Path("watch_report_demo.md").exists():
-                        st.divider()
-                        st.subheader("📝 Generated Report")
-                        with open("watch_report_demo.md", 'r') as f:
+                            c2.metric("Items After Filter", line.split(':')[1].strip().split()[0])
+
+                    import glob as _glob
+                    report_files = sorted(_glob.glob("reports/intelligence_report_*.md"), reverse=True)
+                    if report_files:
+                        latest_report = report_files[0]
+                        st.markdown(f'<div class="section-title" style="margin-top:24px">Generated Report</div>', unsafe_allow_html=True)
+                        with open(latest_report, 'r') as f:
                             report = f.read()
-                            st.markdown(report)
-                        
-                        # Download buttons
+                        st.markdown(report)
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.download_button(
-                                "📄 Download Markdown",
-                                data=report,
-                                file_name="intelligence_report.md",
-                                mime="text/markdown"
-                            )
+                            st.download_button("Download Markdown", data=report,
+                                file_name=Path(latest_report).name, mime="text/markdown",
+                                use_container_width=True)
+                        pdf_path  = latest_report.replace('.md', '.pdf')
+                        docx_path = latest_report.replace('.md', '.docx')
                         with col2:
-                            if Path("watch_report_demo.pdf").exists():
-                                with open("watch_report_demo.pdf", 'rb') as f:
-                                    st.download_button(
-                                        "📕 Download PDF",
-                                        data=f.read(),
-                                        file_name="intelligence_report.pdf",
-                                        mime="application/pdf"
-                                    )
+                            if Path(pdf_path).exists():
+                                with open(pdf_path, 'rb') as f:
+                                    st.download_button("Download PDF", data=f.read(),
+                                        file_name=Path(pdf_path).name, mime="application/pdf",
+                                        use_container_width=True)
                         with col3:
-                            if Path("watch_report_demo.docx").exists():
-                                with open("watch_report_demo.docx", 'rb') as f:
-                                    st.download_button(
-                                        "📘 Download Word",
-                                        data=f.read(),
-                                        file_name="intelligence_report.docx",
-                                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                    )
+                            if Path(docx_path).exists():
+                                with open(docx_path, 'rb') as f:
+                                    st.download_button("Download Word", data=f.read(),
+                                        file_name=Path(docx_path).name,
+                                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                        use_container_width=True)
                 else:
-                    st.error(f"❌ Pipeline failed with exit code {result.returncode}")
+                    st.markdown(f'<div class="alert alert-error">Pipeline failed (exit code {result.returncode}).</div>', unsafe_allow_html=True)
                     st.code(result.stderr, language="text")
-                    
             except subprocess.TimeoutExpired:
-                st.error("❌ Pipeline timed out after 5 minutes")
+                st.markdown('<div class="alert alert-error">Pipeline timed out after 5 minutes.</div>', unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"❌ Error running pipeline: {e}")
-    
-    st.divider()
-    
-    # Status
-    st.subheader("System Status")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        api_key_set = Path(".env").exists() and "GROQ_API_KEY" in open(".env").read()
-        st.metric("Groq API Key", "✅ Set" if api_key_set else "❌ Missing")
-    
-    with col2:
-        db_exists = Path("watcher.db").exists()
-        st.metric("Database", "✅ Exists" if db_exists else "⚪ Empty")
-    
-    with col3:
-        config_valid = len(st.session_state.config.get('feeds', [])) > 0
-        st.metric("RSS Feeds", "✅ Configured" if config_valid else "⚠️ None")
+                st.markdown(f'<div class="alert alert-error">Error: {e}</div>', unsafe_allow_html=True)
 
 
 # ============================================================================
 # PAGE 3: SCHEDULER MANAGEMENT
 # ============================================================================
-elif page == "⏰ Scheduler":
-    st.header("Scheduler Management")
-    st.markdown("_Start, stop, and monitor the automatic pipeline scheduler_")
-    
-    st.divider()
-    
-    # Check scheduler status
+elif page == "Scheduler":
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Scheduler</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Start, stop, and monitor the automatic pipeline scheduler.</p>', unsafe_allow_html=True)
+
     def check_scheduler_running():
         try:
-            result = subprocess.run(
-                ["ps", "aux"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            result = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=5)
             return "start_scheduler" in result.stdout
         except:
             return False
-    
+
     def get_scheduler_pid():
         try:
-            result = subprocess.run(
-                ["pgrep", "-f", "start_scheduler"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            result = subprocess.run(["pgrep", "-f", "start_scheduler"], capture_output=True, text=True, timeout=5)
             pids = result.stdout.strip().split('\n')
             return [p for p in pids if p]
         except:
             return []
-    
-    is_running = check_scheduler_running()
-    scheduler_pids = get_scheduler_pid()
-    
-    # Status display
-    st.subheader("📊 Scheduler Status")
+
+    is_running      = check_scheduler_running()
+    scheduler_pids  = get_scheduler_pid()
+    interval        = st.session_state.config.get('run_every_minutes', 1440)
+    hours           = interval / 60
+    status_badge    = '<span class="badge badge-green">Running</span>' if is_running else '<span class="badge badge-red">Stopped</span>'
+
+    st.markdown(f"""
+<div class="section-card">
+  <div class="section-title">Status</div>
+  <div style="display:flex; gap:40px; align-items:center;">
+    <div><div class="label" style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:4px">State</div>{status_badge}</div>
+    <div><div class="label" style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:4px">Interval</div>
+         <span style="font-weight:600;color:#111827">{hours:.1f}h</span> <span style="color:#6b7280;font-size:.8rem">({interval} min)</span></div>
+    <div><div class="label" style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:4px">Process IDs</div>
+         <span style="font-weight:600;color:#111827">{len(scheduler_pids) if scheduler_pids else '—'}</span></div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns(3)
-    
     with col1:
-        status_text = "🟢 Running" if is_running else "🔴 Stopped"
-        st.metric("Status", status_text)
-    
-    with col2:
-        interval = st.session_state.config.get('run_every_minutes', 1440)
-        hours = interval / 60
-        st.metric("Interval", f"{hours:.1f} hours")
-    
-    with col3:
-        st.metric("Active PIDs", len(scheduler_pids))
-    
-    st.divider()
-    
-    # Control buttons
-    st.subheader("🎮 Controls")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("▶️ Start Scheduler", disabled=is_running, use_container_width=True):
+        if st.button("Start", disabled=is_running, use_container_width=True, type="primary"):
             try:
-                # Start scheduler in background
                 subprocess.Popen(
-                    [
-                        "/bin/bash", "-c",
-                        f"cd {Path.cwd()} && . .venv/bin/activate && nohup python3 -c 'from watcher.scheduler import start_scheduler; start_scheduler()' > scheduler.log 2>&1 &"
-                    ],
+                    ["/bin/bash", "-c",
+                     f"cd {Path.cwd()} && . .venv/bin/activate && nohup python3 -c 'from watcher.scheduler import start_scheduler; start_scheduler()' > scheduler.log 2>&1 &"],
                     start_new_session=True
                 )
-                st.success("✅ Scheduler started! Running in background.")
-                st.info("💡 The scheduler will run the full pipeline immediately, then every " + 
-                       f"{interval} minutes ({hours:.1f} hours).")
+                st.markdown('<div class="alert alert-success">Scheduler started — running in background.</div>', unsafe_allow_html=True)
                 st.rerun()
             except Exception as e:
-                st.error(f"❌ Failed to start scheduler: {e}")
-    
+                st.markdown(f'<div class="alert alert-error">Failed to start: {e}</div>', unsafe_allow_html=True)
     with col2:
-        if st.button("⏸️ Stop Scheduler", disabled=not is_running, use_container_width=True):
+        if st.button("Stop", disabled=not is_running, use_container_width=True):
             try:
                 for pid in scheduler_pids:
                     subprocess.run(["kill", pid], timeout=5)
-                st.success("✅ Scheduler stopped!")
+                st.markdown('<div class="alert alert-success">Scheduler stopped.</div>', unsafe_allow_html=True)
                 st.rerun()
             except Exception as e:
-                st.error(f"❌ Failed to stop scheduler: {e}")
-    
+                st.markdown(f'<div class="alert alert-error">Failed to stop: {e}</div>', unsafe_allow_html=True)
     with col3:
-        if st.button("🔄 Restart Scheduler", disabled=not is_running, use_container_width=True):
+        if st.button("Restart", disabled=not is_running, use_container_width=True):
             try:
-                # Stop
                 for pid in scheduler_pids:
                     subprocess.run(["kill", pid], timeout=5)
-                import time
-                time.sleep(2)
-                # Start
+                import time; time.sleep(2)
                 subprocess.Popen(
-                    [
-                        "/bin/bash", "-c",
-                        f"cd {Path.cwd()} && . .venv/bin/activate && nohup python3 -c 'from watcher.scheduler import start_scheduler; start_scheduler()' > scheduler.log 2>&1 &"
-                    ],
+                    ["/bin/bash", "-c",
+                     f"cd {Path.cwd()} && . .venv/bin/activate && nohup python3 -c 'from watcher.scheduler import start_scheduler; start_scheduler()' > scheduler.log 2>&1 &"],
                     start_new_session=True
                 )
-                st.success("✅ Scheduler restarted!")
+                st.markdown('<div class="alert alert-success">Scheduler restarted.</div>', unsafe_allow_html=True)
                 st.rerun()
             except Exception as e:
-                st.error(f"❌ Failed to restart scheduler: {e}")
-    
-    st.divider()
-    
-    # Logs viewer
-    st.subheader("📜 Scheduler Logs")
-    
+                st.markdown(f'<div class="alert alert-error">Failed to restart: {e}</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-title">Live Logs</div>', unsafe_allow_html=True)
     log_file = Path("scheduler.log")
     if log_file.exists():
         try:
             with open(log_file, 'r') as f:
                 logs = f.read()
-            
-            # Show last 50 lines
-            log_lines = logs.split('\n')
-            recent_logs = '\n'.join(log_lines[-50:])
-            
+            recent_logs = '\n'.join(logs.split('\n')[-50:])
             st.code(recent_logs, language="text", line_numbers=False)
-            
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🔄 Refresh Logs"):
+                if st.button("Refresh", use_container_width=True):
                     st.rerun()
             with col2:
-                if st.button("🗑️ Clear Logs"):
+                if st.button("Clear Logs", use_container_width=True):
                     open(log_file, 'w').close()
-                    st.success("✅ Logs cleared!")
                     st.rerun()
         except Exception as e:
             st.error(f"Error reading logs: {e}")
     else:
-        st.info("No logs yet. Start the scheduler to see logs.")
-    
-    st.divider()
-    
-    # Configuration
-    st.subheader("⚙️ Scheduler Settings")
-    st.info(f"💡 Current interval: **{interval} minutes** ({hours:.1f} hours)")
-    st.markdown("To change the interval, go to **🔧 Advanced** → Scheduler Frequency")
-    
-    # Systemd service option
-    st.divider()
-    st.subheader("🔧 Production Deployment")
-    st.markdown("""
-    For production use, install as a systemd service (survives reboots):
-    
-    ```bash
-    ./install_scheduler_service.sh
-    sudo systemctl status agenticnotes-scheduler
-    sudo systemctl stop agenticnotes-scheduler
-    sudo systemctl start agenticnotes-scheduler
-    ```
-    """)
+        st.markdown('<span style="color:#9ca3af;font-size:.875rem">No logs yet. Start the scheduler to see output here.</span>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    with st.expander("Production deployment (systemd)"):
+        st.code("""./install_scheduler_service.sh
+sudo systemctl status agenticnotes-scheduler
+sudo systemctl stop agenticnotes-scheduler
+sudo systemctl start agenticnotes-scheduler""", language="bash")
 
 
 # ============================================================================
 # PAGE 4: TOPICS MANAGEMENT
 # ============================================================================
-elif page == "🎯 Topics":
-    st.header("Topic Management")
-    st.markdown("_Configure topics the system will monitor and filter by_")
-    
-    st.divider()
-    
+elif page == "Topics":
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Topics</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Define what subjects the system monitors and filters by.</p>', unsafe_allow_html=True)
+
     topics = st.session_state.config.get('topics', [])
-    
-    st.subheader("Current Topics")
-    if topics:
-        for i, topic in enumerate(topics):
-            col1, col2 = st.columns([0.9, 0.1])
-            with col1:
-                st.write(f"**{i+1}. {topic}**")
-            with col2:
-                if st.button("❌", key=f"del_topic_{i}", use_container_width=True):
-                    topics.pop(i)
-                    st.session_state.config['topics'] = topics
-                    st.rerun()
-    else:
-        st.info("No topics configured yet.")
-    
-    st.divider()
-    
-    st.subheader("Add New Topic")
-    new_topic = st.text_input(
-        "Enter topic name",
-        placeholder="e.g., 'machine learning', 'blockchain', 'quantum computing'"
-    )
-    
-    if st.button("➕ Add Topic", use_container_width=True):
-        if new_topic and new_topic not in topics:
-            topics.append(new_topic)
-            st.session_state.config['topics'] = topics
-            st.rerun()
-        elif new_topic in topics:
-            st.warning("This topic already exists!")
-    
-    st.divider()
-    
-    st.subheader("Preset Topic Groups")
-    col1, col2, col3 = st.columns(3)
-    
+
+    col1, col2 = st.columns([3, 2])
+
     with col1:
-        if st.button("🤖 AI/ML Focus", use_container_width=True):
-            st.session_state.config['topics'] = [
-                "artificial intelligence",
-                "machine learning",
-                "deep learning",
-                "neural networks",
-                "generative AI"
-            ]
-            st.rerun()
-    
+        st.markdown('<div class="section-card"><div class="section-title">Active Topics</div>', unsafe_allow_html=True)
+        if topics:
+            for i, topic in enumerate(topics):
+                tc1, tc2 = st.columns([0.88, 0.12])
+                with tc1:
+                    st.markdown(f'<div class="list-row">{topic}</div>', unsafe_allow_html=True)
+                with tc2:
+                    if st.button("Remove", key=f"del_topic_{i}", use_container_width=True):
+                        topics.pop(i)
+                        st.session_state.config['topics'] = topics
+                        st.rerun()
+        else:
+            st.markdown('<span style="color:#9ca3af;font-size:.875rem">No topics configured yet.</span>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-card"><div class="section-title">Add Topic</div>', unsafe_allow_html=True)
+        new_topic = st.text_input("", placeholder="e.g. machine learning, blockchain, quantum computing",
+                                  label_visibility="collapsed")
+        if st.button("Add Topic", use_container_width=True):
+            if new_topic and new_topic not in topics:
+                topics.append(new_topic)
+                st.session_state.config['topics'] = topics
+                st.rerun()
+            elif new_topic in topics:
+                st.markdown('<div class="alert alert-warn">This topic already exists.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with col2:
-        if st.button("💻 Tech General", use_container_width=True):
-            st.session_state.config['topics'] = [
-                "software development",
-                "programming",
-                "technology innovation",
-                "web development",
-                "cloud computing"
-            ]
+        st.markdown('<div class="section-card"><div class="section-title">Preset Collections</div>', unsafe_allow_html=True)
+        if st.button("AI / Machine Learning", use_container_width=True):
+            st.session_state.config['topics'] = ["artificial intelligence","machine learning",
+                "deep learning","neural networks","generative AI"]
             st.rerun()
-    
-    with col3:
-        if st.button("🔐 Security Focus", use_container_width=True):
-            st.session_state.config['topics'] = [
-                "cybersecurity",
-                "data protection",
-                "privacy",
-                "encryption",
-                "threat detection"
-            ]
+        if st.button("Tech General", use_container_width=True):
+            st.session_state.config['topics'] = ["software development","programming",
+                "technology innovation","web development","cloud computing"]
             st.rerun()
-    
-    st.divider()
-    
-    if st.button("💾 Save Configuration", type="primary", use_container_width=True):
+        if st.button("Security Focus", use_container_width=True):
+            st.session_state.config['topics'] = ["cybersecurity","data protection",
+                "privacy","encryption","threat detection"]
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Save Configuration", type="primary", use_container_width=True):
         save_config_file(st.session_state.config)
 
 
 # ============================================================================
 # PAGE 3: DATA SOURCES
 # ============================================================================
-elif page == "📡 Data Sources":
+elif page == "Data Sources":
     st.header("Data Source Configuration")
     st.markdown("_Manage RSS feeds and API sources_")
     
-    st.divider()
-    
-    # RSS Feeds section
-    st.subheader("RSS Feeds")
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Data Sources</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Manage RSS feeds and collection parameters.</p>', unsafe_allow_html=True)
+
     feeds = st.session_state.config.get('feeds', [])
-    
-    if feeds:
-        st.write("**Configured Feeds:**")
-        for i, feed in enumerate(feeds):
-            col1, col2, col3 = st.columns([0.7, 0.2, 0.1])
-            with col1:
-                st.caption(feed)
-            with col2:
-                priority = st.selectbox(
-                    "Priority",
-                    ["High", "Medium", "Low"],
-                    key=f"priority_{i}",
-                    label_visibility="collapsed"
-                )
-            with col3:
-                if st.button("🗑️", key=f"del_feed_{i}"):
-                    feeds.pop(i)
-                    st.session_state.config['feeds'] = feeds
-                    st.rerun()
-    else:
-        st.info("No RSS feeds configured yet.")
-    
-    st.divider()
-    
-    st.subheader("Add RSS Feed")
-    new_feed = st.text_input(
-        "Feed URL",
-        placeholder="https://example.com/rss",
-        label_visibility="collapsed"
-    )
-    
-    if st.button("➕ Add Feed", use_container_width=True):
-        if new_feed and new_feed.startswith('http') and new_feed not in feeds:
-            feeds.append(new_feed)
-            st.session_state.config['feeds'] = feeds
-            st.rerun()
-        elif new_feed in feeds:
-            st.warning("This feed already exists!")
-        elif new_feed:
-            st.warning("Please enter a valid URL starting with http")
-    
-    st.divider()
-    
-    st.subheader("Preset Feed Collections")
-    col1, col2 = st.columns(2)
-    
+
+    col1, col2 = st.columns([3, 2])
+
     with col1:
-        if st.button("🤖 AI News Feeds", use_container_width=True):
+        st.markdown('<div class="section-card"><div class="section-title">Configured Feeds</div>', unsafe_allow_html=True)
+        if feeds:
+            for i, feed in enumerate(feeds):
+                fc1, fc2 = st.columns([0.88, 0.12])
+                with fc1:
+                    st.markdown(f'<div class="list-row">{feed}</div>', unsafe_allow_html=True)
+                with fc2:
+                    if st.button("Remove", key=f"del_feed_{i}", use_container_width=True):
+                        feeds.pop(i)
+                        st.session_state.config['feeds'] = feeds
+                        st.rerun()
+        else:
+            st.markdown('<span style="color:#9ca3af;font-size:.875rem">No feeds configured yet.</span>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-card"><div class="section-title">Add Feed</div>', unsafe_allow_html=True)
+        new_feed = st.text_input("", placeholder="https://example.com/rss", label_visibility="collapsed")
+        if st.button("Add Feed", use_container_width=True):
+            if new_feed and new_feed.startswith('http') and new_feed not in feeds:
+                feeds.append(new_feed)
+                st.session_state.config['feeds'] = feeds
+                st.rerun()
+            elif new_feed in feeds:
+                st.markdown('<div class="alert alert-warn">This feed is already in the list.</div>', unsafe_allow_html=True)
+            elif new_feed:
+                st.markdown('<div class="alert alert-warn">URL must start with http.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="section-card"><div class="section-title">Preset Collections</div>', unsafe_allow_html=True)
+        if st.button("AI News Feeds", use_container_width=True):
             st.session_state.config['feeds'] = [
                 "https://news.ycombinator.com/rss",
                 "https://www.artificialintelligence-news.com/feed/",
@@ -732,9 +752,7 @@ elif page == "📡 Data Sources":
                 "https://techcrunch.com/category/artificial-intelligence/feed/"
             ]
             st.rerun()
-    
-    with col2:
-        if st.button("💻 Tech News Feeds", use_container_width=True):
+        if st.button("Tech News Feeds", use_container_width=True):
             st.session_state.config['feeds'] = [
                 "https://news.ycombinator.com/rss",
                 "https://techcrunch.com/feed/",
@@ -742,274 +760,174 @@ elif page == "📡 Data Sources":
                 "https://arstechnica.com/feed/"
             ]
             st.rerun()
-    
-    st.divider()
-    
-    # Max items per feed
-    st.subheader("Collection Settings")
-    max_items = st.slider(
-        "Max items per feed per collection",
-        min_value=1,
-        max_value=50,
-        value=st.session_state.config.get('max_items_per_feed', 10),
-        help="Higher values = more data but slower collection"
-    )
-    st.session_state.config['max_items_per_feed'] = max_items
-    
-    st.divider()
-    
-    if st.button("💾 Save Configuration", type="primary", use_container_width=True):
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-card"><div class="section-title">Collection Limits</div>', unsafe_allow_html=True)
+        max_items = st.slider("Items per feed", min_value=1, max_value=50,
+            value=st.session_state.config.get('max_items_per_feed', 10),
+            help="Articles fetched per RSS feed per run")
+        st.session_state.config['max_items_per_feed'] = max_items
+        max_synth = st.slider("Max articles to LLM", min_value=5, max_value=100,
+            value=st.session_state.config.get('max_synthesis_items', 25),
+            help="Top N sent to synthesis. Lower = faster, Higher = richer report")
+        st.session_state.config['max_synthesis_items'] = max_synth
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Save Configuration", type="primary", use_container_width=True):
         save_config_file(st.session_state.config)
 
 
 # ============================================================================
 # PAGE 4: ADVANCED SETTINGS
 # ============================================================================
-elif page == "🔧 Advanced":
-    st.header("Advanced Configuration")
-    st.markdown("_Fine-tune filtering, synthesis, and scheduling_")
-    
-    st.divider()
-    
-    # Scheduler settings
-    st.subheader("🕐 Scheduler")
-    run_every = st.slider(
-        "Run collection every (minutes)",
-        min_value=15,
-        max_value=10080,
-        value=st.session_state.config.get('run_every_minutes', 1440),
-        step=15,
-        help="1440 min = 24 hours (daily). 60 min = hourly"
-    )
-    st.session_state.config['run_every_minutes'] = run_every
-    st.caption(f"⏱️ Collection will run every {run_every} minutes ({run_every//60}h {run_every%60}m)")
-    
-    st.divider()
-    
-    # Synthesis settings
-    st.subheader("🤖 Synthesis Configuration")
-    
-    use_api = st.checkbox(
-        "Use API-based LLM (Recommended)",
-        value=st.session_state.config.get('use_api_llm', True),
-        help="API models provide much better quality than local models"
-    )
-    st.session_state.config['use_api_llm'] = use_api
-    
-    if use_api:
-        api_provider = st.selectbox(
-            "API Provider",
-            ["groq", "gemini", "ollama", "together"],
-            index=["groq", "gemini", "ollama", "together"].index(st.session_state.config.get('api_provider', 'groq')),
-            help="Groq: GPT-OSS 120B/Llama 70B (ultra-fast, free) | Gemini: 2.0 Flash (best quality, 1M context, free) | Ollama: Local, private | Together: Alternative cloud"
-        )
-        st.session_state.config['api_provider'] = api_provider
-        
-        # Model selection - BEST FREE GEMINI MODELS (Feb 2026)
-        model_options = {
-            'groq': {
-                'models': ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile'],
-                'names': ['GPT-OSS 120B (best, 120B params)', 'Llama 3.3 70B (reliable)'],
-                'default': 'openai/gpt-oss-120b'
-            },
-            'gemini': {
-                'models': [
-                    'gemini-3-flash-preview',           # Newest! Feb 2026
-                    'gemini-2.5-pro',                   # Best quality
-                    'gemini-2.5-flash',                 # Fast + reasoning
-                    'gemini-2.0-flash',                 # Balanced
-                    'gemini-2.0-flash-lite'             # Smallest/fastest
-                ],
-                'names': [
-                    'Gemini 3 Flash (NEWEST - Feb 2026)',
-                    'Gemini 2.5 Pro (best quality, reasoning)',
-                    'Gemini 2.5 Flash (hybrid reasoning, 1M context)',
-                    'Gemini 2.0 Flash (balanced, 1M context)',
-                    'Gemini 2.0 Flash-Lite (fastest, cheapest)'
-                ],
-                'default': 'gemini-3-flash-preview'
+elif page == "Advanced":
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Advanced</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Fine-tune the LLM, filtering, scheduling, and storage settings.</p>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown('<div class="section-card"><div class="section-title">Synthesis Model</div>', unsafe_allow_html=True)
+        use_api = st.checkbox("Use API-based LLM", value=st.session_state.config.get('use_api_llm', True))
+        st.session_state.config['use_api_llm'] = use_api
+
+        if use_api:
+            api_provider = st.selectbox("Provider",
+                ["groq", "gemini", "ollama", "together"],
+                index=["groq", "gemini", "ollama", "together"].index(
+                    st.session_state.config.get('api_provider', 'groq')))
+            st.session_state.config['api_provider'] = api_provider
+
+            model_options = {
+                'groq':   {'models': ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile'],
+                           'names':  ['GPT-OSS 120B (best, 120B params)', 'Llama 3.3 70B (reliable)'],
+                           'default': 'openai/gpt-oss-120b'},
+                'gemini': {'models': ['gemini-3-flash-preview','gemini-2.5-pro','gemini-2.5-flash','gemini-2.0-flash','gemini-2.0-flash-lite'],
+                           'names':  ['Gemini 3 Flash (newest)','Gemini 2.5 Pro (best quality)','Gemini 2.5 Flash (1M ctx)','Gemini 2.0 Flash (balanced)','Gemini 2.0 Flash-Lite (fastest)'],
+                           'default': 'gemini-3-flash-preview'},
             }
-        }
-        
-        provider_models = model_options[api_provider]
-        current_model = st.session_state.config.get('api_model', provider_models['default'])
-        
-        # Find current model index (default to 0 if not found)
-        try:
-            current_index = provider_models['models'].index(current_model)
-        except ValueError:
-            current_index = 0
-        
-        selected_model_name = st.selectbox(
-            "Model",
-            provider_models['names'],
-            index=current_index,
-            help="Choose the specific model to use with this provider"
-        )
-        
-        # Map back to actual model ID
-        selected_model = provider_models['models'][provider_models['names'].index(selected_model_name)]
-        st.session_state.config['api_model'] = selected_model
-        
-        # Provider-specific info and setup instructions
-        if api_provider == 'groq':
-            st.info("⚡ **Groq**: Ultra-fast, 250K tokens/min free tier")
-            st.markdown("**Setup:** Get free API key at https://console.groq.com/keys")
-            st.markdown("**Set in .env:** `GROQ_API_KEY=your-key-here`")
-        
-        elif api_provider == 'gemini':
-            st.info("🏆 **Gemini**: Best quality, 1M context, 1500 req/day free")
-            st.markdown("**Setup:** Get free API key at https://aistudio.google.com/app/apikey")
-            st.markdown("**Set in .env:** `GEMINI_API_KEY=your-key-here`")
-        
-        elif api_provider == 'ollama':
-            st.info("🏠 **Ollama**: Run locally, fully private, no API key needed")
-            st.markdown("**Setup:** `curl -fsSL https://ollama.com/install.sh | sh`")
-            st.markdown("**Start:** `ollama serve && ollama pull " + selected_model.split(':')[0] + "`")
-        
+            pm = model_options.get(api_provider, model_options['groq'])
+            current_model = st.session_state.config.get('api_model', pm['default'])
+            try:
+                cur_idx = pm['models'].index(current_model)
+            except ValueError:
+                cur_idx = 0
+            selected_name = st.selectbox("Model", pm['names'], index=cur_idx)
+            selected_model = pm['models'][pm['names'].index(selected_name)]
+            st.session_state.config['api_model'] = selected_model
+
+            tips = {
+                'groq':    ('Groq',      'Ultra-fast · 250K tokens/min · free', 'GROQ_API_KEY',    'https://console.groq.com/keys'),
+                'gemini':  ('Gemini',    '1M context · 1500 req/day · free',     'GEMINI_API_KEY',  'https://aistudio.google.com/app/apikey'),
+                'ollama':  ('Ollama',    'Local · fully private · no key needed', None,              'https://ollama.com'),
+                'together':('Together', 'Cloud alternative',                       'TOGETHER_API_KEY','https://api.together.xyz/signup'),
+            }
+            name, desc, env_var, url = tips.get(api_provider, ('', '', None, ''))
+            st.markdown(f'<div class="alert alert-info"><strong>{name}</strong> — {desc}<br><small>Docs: <a href="{url}" target="_blank">{url}</a></small></div>', unsafe_allow_html=True)
+            if env_var:
+                st.code(f'{env_var}=your-key-here  # add to .env', language="bash")
         else:
-            st.info("☁️ **Together AI**: Alternative cloud provider")
-            st.markdown("**Setup:** Get API key at https://api.together.xyz/signup")
-    else:
-        st.warning("⚠️ Template mode: Basic synthesis without LLM (fast but limited quality)")
-        st.session_state.config['use_llm'] = False
-    
-    st.divider()
-    
-    st.subheader("📊 Filter Settings")
-    filter_threshold = st.slider(
-        "Relevance threshold",
-        min_value=0.0,
-        max_value=1.0,
-        value=st.session_state.config.get('filter_threshold', 0.45),
-        step=0.05,
-        help="Lower = more lenient (more items), Higher = stricter (fewer items)"
-    )
-    st.session_state.config['filter_threshold'] = filter_threshold
-    
-    if filter_threshold < 0.35:
-        st.caption("⚠️ Very lenient - may include less relevant items")
-    elif filter_threshold > 0.65:
-        st.caption("⚠️ Very strict - may filter out relevant items")
-    else:
-        st.caption("✅ Balanced filtering")
-    
-    st.divider()
-    
-    # Database settings
-    st.subheader("💾 Database")
-    db_path = st.text_input(
-        "Database path",
-        value=st.session_state.config.get('database', 'watcher.db')
-    )
-    st.session_state.config['database'] = db_path
-    
-    chroma_dir = st.text_input(
-        "ChromaDB persistence directory",
-        value=st.session_state.config.get('chroma_persist_dir', 'chroma_data'),
-        help="Vector embeddings storage"
-    )
-    st.session_state.config['chroma_persist_dir'] = chroma_dir
-    
-    st.divider()
-    
-    if st.button("💾 Save Configuration", type="primary", use_container_width=True):
+            st.markdown('<div class="alert alert-warn">Template mode active — basic output, no LLM.</div>', unsafe_allow_html=True)
+            st.session_state.config['use_llm'] = False
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-card"><div class="section-title">Storage</div>', unsafe_allow_html=True)
+        db_path = st.text_input("SQLite database path", value=st.session_state.config.get('database', 'watcher.db'))
+        st.session_state.config['database'] = db_path
+        chroma_dir = st.text_input("ChromaDB directory", value=st.session_state.config.get('chroma_persist_dir', 'chroma_data'))
+        st.session_state.config['chroma_persist_dir'] = chroma_dir
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="section-card"><div class="section-title">Relevance Filter</div>', unsafe_allow_html=True)
+        filter_threshold = st.slider("Threshold", min_value=0.0, max_value=1.0,
+            value=st.session_state.config.get('filter_threshold', 0.45), step=0.05,
+            help="Lower = more articles pass through, Higher = only close matches")
+        st.session_state.config['filter_threshold'] = filter_threshold
+        level = "Lenient — may include loosely relevant items" if filter_threshold < 0.35 \
+               else "Strict — may reject borderline relevant items" if filter_threshold > 0.65 \
+               else "Balanced"
+        st.markdown(f'<div style="font-size:.8rem;color:#6b7280;margin-top:4px">{level}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="section-card"><div class="section-title">Scheduler Frequency</div>', unsafe_allow_html=True)
+        run_every = st.slider("Run every (minutes)", min_value=15, max_value=10080,
+            value=st.session_state.config.get('run_every_minutes', 1440), step=15)
+        st.session_state.config['run_every_minutes'] = run_every
+        st.markdown(f'<div style="font-size:.8rem;color:#6b7280;margin-top:4px">Every {run_every} min &nbsp;·&nbsp; {run_every//60}h {run_every%60:02d}m</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Save Configuration", type="primary", use_container_width=True):
         save_config_file(st.session_state.config)
 
 
 # ============================================================================
 # PAGE 5: MONITORING
 # ============================================================================
-elif page == "📈 Monitoring":
-    st.header("System Monitoring")
-    st.markdown("_View collected data and system health_")
-    
-    st.divider()
-    
-    # Statistics
-    st.subheader("📊 Collection Statistics")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Items", stats['items'])
-    with col2:
-        st.metric("Unique Sources", stats['sources'])
-    with col3:
-        st.metric("Oldest Item", stats['earliest'][:10] if stats['earliest'] else "N/A")
-    with col4:
-        st.metric("Latest Item", stats['latest'][:10] if stats['latest'] else "N/A")
-    
-    st.divider()
-    
-    # Browse items
-    st.subheader("📄 Recent Items")
+elif page == "Monitoring":
+    st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#111827;margin-bottom:4px">Monitoring</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Inspect collected data and system health.</p>', unsafe_allow_html=True)
+
+    earliest_str = stats['earliest'][:10] if stats['earliest'] else "—"
+    latest_str   = stats['latest'][:10]   if stats['latest']   else "—"
+    st.markdown(f"""
+<div class="stat-row">
+  <div class="stat-card"><div class="label">Total Articles</div><div class="value">{stats['items']:,}</div></div>
+  <div class="stat-card"><div class="label">Unique Sources</div><div class="value">{stats['sources']}</div></div>
+  <div class="stat-card"><div class="label">Oldest Entry</div><div class="value" style="font-size:1rem;padding-top:6px">{earliest_str}</div></div>
+  <div class="stat-card"><div class="label">Latest Entry</div><div class="value" style="font-size:1rem;padding-top:6px">{latest_str}</div></div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown('<div class="section-card"><div class="section-title">Recent Articles</div>', unsafe_allow_html=True)
     db_path = st.session_state.config.get('database', 'watcher.db')
-    
     if Path(db_path).exists():
         try:
             conn = sqlite3.connect(db_path)
             c = conn.cursor()
-            
-            c.execute("""
-                SELECT title, source, published, summary
-                FROM items
-                ORDER BY published DESC
-                LIMIT 20
-            """)
+            c.execute("SELECT title, source, published, summary FROM items ORDER BY published DESC LIMIT 20")
             items = c.fetchall()
             conn.close()
-            
             if items:
                 for i, (title, source, published, summary) in enumerate(items, 1):
-                    with st.expander(f"{i}. {title[:80]}... ({source})"):
-                        st.write(f"**Published:** {published}")
-                        st.write(f"**Source:** {source}")
+                    with st.expander(f"{title[:90] if title else 'Untitled'} — {source}"):
+                        col_a, col_b = st.columns(2)
+                        col_a.markdown(f'<span style="font-size:.8rem;color:#6b7280">Published</span><br><b>{published}</b>', unsafe_allow_html=True)
+                        col_b.markdown(f'<span style="font-size:.8rem;color:#6b7280">Source</span><br><b>{source}</b>', unsafe_allow_html=True)
                         if summary:
-                            st.write(f"**Summary:** {summary[:300]}...")
+                            st.markdown(f'<p style="font-size:.875rem;color:#374151;margin-top:10px">{summary[:400]}...</p>', unsafe_allow_html=True)
             else:
-                st.info("No items collected yet. Run collector to fetch data.")
+                st.markdown('<span style="color:#9ca3af;font-size:.875rem">No items yet. Run the pipeline to collect articles.</span>', unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error reading database: {e}")
     else:
-        st.warning("Database not found. Run collector first.")
-    
-    st.divider()
-    
-    # System health
-    st.subheader("🏥 System Health")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**Configuration Files:**")
-        config_exists = Path("config.yaml").exists()
-        st.write(f"- config.yaml: {'✅' if config_exists else '❌'}")
-    
-    with col2:
-        st.write("**Dependencies:**")
-        try:
-            import feedparser
-            import yaml
-            import sqlite3
-            st.write("- feedparser: ✅")
-            st.write("- yaml: ✅")
-            st.write("- sqlite3: ✅")
-        except:
-            st.write("- Missing dependencies: ❌")
+        st.markdown('<div class="alert alert-warn">Database not found. Run the collector first.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    st.markdown('<div class="section-card"><div class="section-title">System Health</div>', unsafe_allow_html=True)
+    config_ok = Path("config.yaml").exists()
+    env_ok    = Path(".env").exists()
+    db_ok     = Path(db_path).exists()
+    def _badge(ok): return '<span class="badge badge-green">OK</span>' if ok else '<span class="badge badge-red">Missing</span>'
+    st.markdown(f"""
+<div style="font-size:.875rem;line-height:2.4;color:#374151;">
+  <div style="display:flex;justify-content:space-between;max-width:320px"><span>config.yaml</span>{_badge(config_ok)}</div>
+  <div style="display:flex;justify-content:space-between;max-width:320px"><span>.env (API keys)</span>{_badge(env_ok)}</div>
+  <div style="display:flex;justify-content:space-between;max-width:320px"><span>SQLite database</span>{_badge(db_ok)}</div>
+</div>
+""", unsafe_allow_html=True)
+    try:
+        import feedparser, chromadb
+        st.markdown(f"""
+<div style="font-size:.875rem;line-height:2.4;color:#374151;margin-top:8px;">
+  <div style="display:flex;justify-content:space-between;max-width:320px"><span>feedparser</span>{_badge(True)}</div>
+  <div style="display:flex;justify-content:space-between;max-width:320px"><span>chromadb</span>{_badge(True)}</div>
+</div>
+""", unsafe_allow_html=True)
+    except ImportError as e:
+        st.markdown(f'<div class="alert alert-error">Missing dependency: {e}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
 
-# Footer
-st.divider()
-st.markdown("""
----LangChain Orchestrator**: Coordinates multi-agent workflow
-- **Collectors**: Fetch data from RSS feeds and APIs
-- **Filters**: Select items matching configured topics (semantic similarity)
-- **ChromaDB**: Vector storage for novelty detection
-- **Synthesizer**: Generate intelligence reports with DeepSeek R1 671B (HuggingFace) or Llama 3.3 70B (Groq)
-
-Run in terminal:
-- `source load_env.sh` - Load API keys
-- `python3 run_full_pipeline.py` - Run full pipeline
-- `python3 demo_langchain.py` - Test LangChain orchestrator
-- `python demo/run_collectors.py` - Collect new data
-- `python demo/test_agents.py` - Test all agents
-- `streamlit run streamlit_app.py` - Launch this UI
-""")

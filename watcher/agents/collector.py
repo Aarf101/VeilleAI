@@ -8,6 +8,7 @@ Responsibilities implemented here:
 """
 from typing import List, Dict
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -90,16 +91,22 @@ class CollectorAgent:
             except Exception as e:
                 logger.error(f"Error saving or deduping item: {e}")
 
-        # Collect RSS feeds
-        for f in feeds:
+        # Collect RSS feeds — parallel HTTP requests for speed
+        def _fetch_one_rss(f):
             try:
-                feed_items = fetch_rss(f, max_items=max_feed)
+                return fetch_rss(f, max_items=max_feed)
             except Exception as e:
                 logger.error(f"Failed to fetch RSS {f}: {e}")
-                feed_items = []
+                return []
 
-            for e in feed_items:
-                _process_entry(e)
+        all_rss_entries: List[Dict] = []
+        with ThreadPoolExecutor(max_workers=min(15, len(feeds) or 1)) as executor:
+            futures = [executor.submit(_fetch_one_rss, f) for f in feeds]
+            for future in as_completed(futures):
+                all_rss_entries.extend(future.result())
+
+        for e in all_rss_entries:
+            _process_entry(e)
 
         # Collect APIs
         for a in apis:

@@ -271,7 +271,17 @@ class Synthesizer:
         NO TEMPLATE FALLBACK - we trust the LLM output.
         Only falls back on actual API/generation errors.
         """
-        
+        # Cap items sent to LLM for speed — items are already ranked by relevance
+        try:
+            from watcher.config import load_config
+            _cfg = load_config() or {}
+            max_synthesis_items = int(_cfg.get("max_synthesis_items", 25))
+        except Exception:
+            max_synthesis_items = 25
+        if len(items) > max_synthesis_items:
+            print(f"ℹ️  Capping LLM input: {len(items)} → {max_synthesis_items} items (set max_synthesis_items in config.yaml to change)")
+            items = items[:max_synthesis_items]
+
         prompt = self._build_llm_prompt(topic, period, context, items, historical_context)
         
         try:

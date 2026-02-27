@@ -239,12 +239,6 @@ def run_full_pipeline():
         f.write(report)
     print(f"✓ Report saved to {report_path}")
     
-    # Also save as "latest" for easy access
-    latest_path = "watch_report_demo.md"
-    with open(latest_path, 'w', encoding='utf-8') as f:
-        f.write(report)
-    print(f"✓ Latest copy: {latest_path}")
-    
     # Export to PDF and Word with timestamp
     print("\n📄 Exporting to PDF and Word...")
     try:
@@ -257,15 +251,6 @@ def run_full_pipeline():
         )
         print(f"✓ PDF exported: {pdf_path}")
         
-        # Latest PDF copy
-        latest_pdf = "watch_report_demo.pdf"
-        synthesizer.export_to_pdf(
-            note_text=report,
-            output_path=latest_pdf,
-            topic=", ".join(topics[:2]),
-            period="LangChain Pipeline Execution"
-        )
-        
         docx_path = reports_dir / f"intelligence_report_{timestamp}.docx"
         synthesizer.export_to_docx(
             note_text=report,
@@ -274,15 +259,6 @@ def run_full_pipeline():
             period="LangChain Pipeline Execution"
         )
         print(f"✓ Word exported: {docx_path}")
-        
-        # Latest Word copy
-        latest_docx = "watch_report_demo.docx"
-        synthesizer.export_to_docx(
-            note_text=report,
-            output_path=latest_docx,
-            topic=", ".join(topics[:2]),
-            period="LangChain Pipeline Execution"
-        )
     except Exception as e:
         print(f"⚠ Export failed (optional): {e}")
     

@@ -19,7 +19,7 @@ feeds:
 - https://blog.research.google/feeds/posts/default
 - https://openai.com/blog/rss/
 apis: []
-max_items_per_feed: 5  # Focus on top articles per source (quality over quantity)
+max_items_per_feed: 3
 run_every_minutes: 15
 topics:
 - artificial intelligence
@@ -31,12 +31,13 @@ topics:
 - AI
 - tech news
 - startups
-filter_threshold: 0.15  # Lower for more rich content (was 0.3, originally 0.2)
+filter_threshold: 0.15
 use_api_llm: true
-api_provider: gemini  # Options: groq, gemini, ollama, together, huggingface
-api_model: gemini-2.5-flash  # Hybrid reasoning model - 1M context, now with 4096 token output
+api_provider: gemini
+api_model: gemini-2.5-flash
 use_llm: false
 synthesizer_model: google/flan-t5-base
 synthesizer_task: text2text-generation
 synthesizer_max_new_tokens: 512
 chroma_persist_dir: chroma_data
+max_synthesis_items: 6

@@ -38,8 +38,19 @@ class LangChainOrchestrator:
         print(f"   ✓ {len(collected)} items\n")
         
         if not collected:
-            return {'cycle_id': cycle_id, 'collected': [], 'filtered': [], 
-                   'novel': [], 'synthesis': "No items."}
+            # Fallback: use recent items from DB instead of returning empty
+            if self.storage:
+                print("   ⚠️ No new items collected. Falling back to recent items from DB...")
+                recent = self.storage.get_recent_items_full(limit=100)
+                if recent:
+                    collected = recent
+                    print(f"   ✓ Using {len(collected)} recent items from DB\n")
+                else:
+                    return {'cycle_id': cycle_id, 'collected': [], 'filtered': [],
+                           'novel': [], 'synthesis': "No items."}
+            else:
+                return {'cycle_id': cycle_id, 'collected': [], 'filtered': [],
+                       'novel': [], 'synthesis': "No items."}
         
         # Filter
         print("2️⃣  FILTERING...")
