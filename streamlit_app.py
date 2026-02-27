@@ -181,7 +181,9 @@ html, body, [class*="css"] {
 .alert-error   { background:#fef2f2; border-left:3px solid #ef4444; color:#991b1b; }
 
 /* ── Report expander polish ── */
-details summary { font-weight: 500; color: #374151; }
+details summary { font-weight: 600; color: #2563eb; }
+div[data-testid="stExpander"] summary p { color: #2563eb !important; font-weight: 600 !important; }
+div[data-testid="stExpander"] summary svg { color: #2563eb !important; }
 
 /* ── Button sizing tweak ── */
 [data-testid="stButton"] > button {
