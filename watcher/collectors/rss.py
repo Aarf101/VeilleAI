@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _fetch_article_content(url: str, timeout: int = 10) -> str:
+def _fetch_article_content(url: str, timeout: int = 3) -> str:
     """Fetch full article content from URL using web scraping.
     
     Args:

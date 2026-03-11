@@ -316,119 +316,64 @@ class Synthesizer:
         return self._enforce_structure(raw_output, items, topic, period, context, historical_context)
     
     def _build_llm_prompt(self, topic: str, period: str, context: str, items: List[Dict], historical_context: str = "") -> str:
-        """Build prompt for LLM synthesis - FORCE RICH DETAILED CONTENT."""
+        """Build prompt for LLM synthesis - concise, professional format."""
         items_text = self._format_items_for_llm(items)
-        
-        historical_note = ""
-        if historical_context:
-            historical_note = f"\n\n**Période précédente:**\n{historical_context}"
-        
-        return f"""Vous êtes un analyste senior en veille technologique. Rédigez une note COMPLÈTE et DÉTAILLÉE de 800+ mots MINIMUM.
 
-IMPÉRATIF: CONTENU ULTRA-RICHE OBLIGATOIRE - Chaque section DOIT contenir des paragraphes COMPLETS.
+        historical_note = f"\n\nPériode précédente : {historical_context}" if historical_context else ""
 
-═══════════════════════════════════════════════════════════════════
-STRUCTURE OBLIGATOIRE
-═══════════════════════════════════════════════════════════════════
+        return f"""Vous êtes un analyste en veille technologique. Rédigez une note de veille concise et professionnelle.
+
+FORMAT OBLIGATOIRE — respectez exactement cette structure :
+
+# VEILLE TECHNOLOGIQUE : {topic}
+Période : {period}
 
 ## RÉSUMÉ EXÉCUTIF
-[MINIMUM 150 mots - 3-4 paragraphes COMPLETS]
-
-Identifiez les 2-3 annonces MAJEURES avec leurs NOMS PRÉCIS et CHIFFRES CLÉS:
-- Quel développement? Qui l'a annoncé? Quels résultats/performances (+X% sur benchmark Y)?
-- Pourquoi c'est important? Impact business et technique?
-- Quelle tendance émerge du marché?
-- Quelles implications pour les organisations?
-
-EXEMPLE: "Cette semaine a été marquée par trois annonces majeures : le lancement de GPT-4.5 par OpenAI avec +40% sur MATH benchmark et +25% sur HumanEval, l'introduction d'un framework d'agents multi-modaux par Anthropic, et une étude Stanford sur les biais (+35% disparités). Le secteur confirme son rythme d'innovation..."
+2 à 3 phrases. Citez les 2-3 annonces majeures avec leurs noms précis et chiffres clés si disponibles. Terminez par la tendance dominante.
 
 ## RAPPEL DU CONTEXTE
-[MINIMUM 120 mots - 2-3 paragraphes]
-
-Contextualisez PRÉCISÉMENT:{historical_note}
-- Qu'observions-nous la période précédente? Quelles annonces dominantes?
-- Comment le contexte a évolué? Quels changements du marché?
-- Quels enjeux techniques/business actuels?
-- Sur quoi se concentre l'attention du marché maintenant?
+2 à 3 phrases maximum. Que se passait-il la période précédente ? Comment le contexte a évolué ?{historical_note}
 
 ## NOUVEAUTÉS DE LA PÉRIODE
-[MINIMUM 400 mots - 3-5 articles DÉTAILLÉS]
 
-Pour CHAQUE développement majeur:
+### 1. [Titre de l'article]
+Un paragraphe de 3 à 5 phrases : ce qui a été annoncé, pourquoi c'est important, données chiffrées si disponibles.
+Source : [Nom de la source] - [Date]
 
-### 1. [TITRE COMPLET ET PRÉCIS]
+### 2. [Titre]
+[Même format]
+Source : [Nom] - [Date]
 
-**Description détaillée** [80+ mots]:
-- Qu'a été annoncé EXACTEMENT? Caractéristiques principales?
-- Quelles innovations apportées? Quel problème résolu?
-- Quelles capacités nouvelles?
+### 3. [Titre]
+[Même format]
+Source : [Nom] - [Date]
 
-**Contexte technologique** [60+ mots]:
-- Positionnement vs existant? Concurrents?
-- Quelle évolution dans le domaine?
-
-**Données quantitatives** [si disponibles]:
-- Performances: +X% sur benchmark Y
-- Améliorations chiffrées
-- Capacités: taille, vitesse, précision
-
-**Source:** [Nom] - [Date complète]
-
-### 2. [Deuxième annonce]
-[Même structure COMPLÈTE - 150+ mots]
-
-### 3. [Troisième annonce]
-[Même structure COMPLÈTE - 150+ mots]
+(Continuez pour chaque article pertinent)
 
 ## ANALYSE ET IMPLICATIONS
-[MINIMUM 250 mots - 4 sous-sections]
-
-**Convergences et tendances** [70+ mots]:
-Quels patterns transversaux? Direction de l'industrie? Technologies convergentes?
-
-**Implications techniques** [60+ mots]:
-Nouvelles capacités? Changements d'architecture? Opportunités/risques techniques?
-
-**Implications business** [60+ mots]:
-Impact compétitivité? Opportunités différenciation? Risques disruption?
-
-**Recommandations** [60+ mots]:
-- Court terme (0-3 mois): Actions concrètes
-- Moyen terme (3-12 mois): Déploiement
-- Questions stratégiques
+Un seul paragraphe de 4 à 6 phrases. Quels patterns émergent ? Quelles implications techniques et business ? Quelle direction pour l'industrie ?
 
 ## SOURCES ET RÉFÉRENCES
-Listez TOUTES les sources:
-• [Source] - "Titre complet" - [Date] - [URL]
+• [Source] - "Titre" - [Date]
+• ...
 
-═══════════════════════════════════════════════════════════════════
-DONNÉES
-═══════════════════════════════════════════════════════════════════
+---
 
-Sujet: {topic}
-Période: {period}
-Contexte: {context}
+RÈGLES :
+- Chaque article : 3 à 5 phrases, pas de sous-sections, pas de listes internes
+- Pas de répétition entre le résumé et les articles
+- Chiffres et noms précis quand disponibles, sinon ne pas inventer
+- Langue : français
 
-Articles ({len(items)} articles):
+DONNÉES :
+Sujet : {topic}
+Période : {period}
+Contexte : {context}
+
+Articles ({len(items)}) :
 {items_text}
 
-═══════════════════════════════════════════════════════════════════
-INSTRUCTIONS CRITIQUES
-═══════════════════════════════════════════════════════════════════
-
-✓ LONGUEUR: 800+ mots MINIMUM - JAMAIS de contenu coupé/tronqué
-✓ PROFONDEUR: Analysez EN DÉTAIL - ZÉRO paraphrase superficielle  
-✓ PRÉCISION: Noms exacts, chiffres précis, dates, sources
-✓ RICHESSE: Paragraphes de 4-6 phrases par section
-✓ DONNÉES: Citez TOUS benchmarks/métriques disponibles
-✓ COMPLÉTUDE: TOUTES sections remplies, AUCUNE vide
-
-✗ INTERDIT: Résumés 2 lignes, "...", sections vides, contenu coupé
-✗ INTERDIT: Listes sans explication, bullet points sans détails
-
-SI contenu insuffisant: Développez analyse, implications, contexte pour atteindre 800+ mots.
-
-RÉDIGEZ la note COMPLÈTE maintenant:
+Rédigez la note maintenant :
 """
     
     def _format_items_for_llm(self, items: List[Dict]) -> str:

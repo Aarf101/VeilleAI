@@ -479,7 +479,7 @@ elif page == "Run Pipeline":
                             if line.strip() and not line.startswith('#'):
                                 key, value = line.strip().split('=', 1)
                                 env[key] = value
-                result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=300)
+                result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=900)
 
                 if result.returncode == 0:
                     st.markdown('<div class="alert alert-success">Pipeline completed successfully.</div>', unsafe_allow_html=True)
@@ -527,7 +527,7 @@ elif page == "Run Pipeline":
                     st.markdown(f'<div class="alert alert-error">Pipeline failed (exit code {result.returncode}).</div>', unsafe_allow_html=True)
                     st.code(result.stderr, language="text")
             except subprocess.TimeoutExpired:
-                st.markdown('<div class="alert alert-error">Pipeline timed out after 5 minutes.</div>', unsafe_allow_html=True)
+                st.markdown('<div class="alert alert-error">Pipeline timed out after 15 minutes.</div>', unsafe_allow_html=True)
             except Exception as e:
                 st.markdown(f'<div class="alert alert-error">Error: {e}</div>', unsafe_allow_html=True)
 
@@ -854,8 +854,8 @@ elif page == "Advanced":
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="section-card"><div class="section-title">Scheduler Frequency</div>', unsafe_allow_html=True)
-        run_every = st.slider("Run every (minutes)", min_value=15, max_value=10080,
-            value=st.session_state.config.get('run_every_minutes', 1440), step=15)
+        run_every = st.slider("Run every (minutes)", min_value=1, max_value=10080,
+            value=st.session_state.config.get('run_every_minutes', 1440), step=1)
         st.session_state.config['run_every_minutes'] = run_every
         st.markdown(f'<div style="font-size:.8rem;color:#6b7280;margin-top:4px">Every {run_every} min &nbsp;·&nbsp; {run_every//60}h {run_every%60:02d}m</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)

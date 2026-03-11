@@ -19,8 +19,8 @@ feeds:
 - https://blog.research.google/feeds/posts/default
 - https://openai.com/blog/rss/
 apis: []
-max_items_per_feed: 3
-run_every_minutes: 15
+max_items_per_feed: 4
+run_every_minutes: 1
 topics:
 - artificial intelligence
 - machine learning
@@ -31,7 +31,7 @@ topics:
 - AI
 - tech news
 - startups
-filter_threshold: 0.15
+filter_threshold: 0.3
 use_api_llm: true
 api_provider: gemini
 api_model: gemini-2.5-flash
@@ -40,4 +40,4 @@ synthesizer_model: google/flan-t5-base
 synthesizer_task: text2text-generation
 synthesizer_max_new_tokens: 512
 chroma_persist_dir: chroma_data
-max_synthesis_items: 6
+max_synthesis_items: 8
