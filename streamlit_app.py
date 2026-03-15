@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Dict, List, Any
 import sqlite3
 import subprocess
+import os
+import sys
+import signal
 from datetime import datetime
 import glob
 
@@ -363,8 +366,15 @@ if page == "Dashboard":
         if st.button("Run Full Pipeline", use_container_width=True, type="primary"):
             st.info("Switch to 'Run Pipeline' in the sidebar to execute the system.")
         if st.button("Check Scheduler Status", use_container_width=True):
-            result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
-            running = "start_scheduler" in result.stdout
+            running = False
+            scheduler_pid_file = Path("scheduler.pid")
+            if scheduler_pid_file.exists():
+                try:
+                    pid = int(scheduler_pid_file.read_text().strip())
+                    os.kill(pid, 0)
+                    running = True
+                except Exception:
+                    running = False
             if running:
                 st.markdown('<div class="alert alert-success">Scheduler is active and running in the background.</div>', unsafe_allow_html=True)
             else:
@@ -539,20 +549,93 @@ elif page == "Scheduler":
     st.markdown('<h2 style="font-size:1.4rem;font-weight:700;color:#2563eb;margin-bottom:4px">Scheduler</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#6b7280;font-size:.875rem;margin-bottom:24px">Start, stop, and monitor the automatic pipeline scheduler.</p>', unsafe_allow_html=True)
 
-    def check_scheduler_running():
+    scheduler_pid_file = Path("scheduler.pid")
+    log_file = Path("scheduler.log")
+
+    def _load_env_vars() -> Dict[str, str]:
+        env = os.environ.copy()
+        if Path(".env").exists():
+            with open(".env") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        env[key] = value
+        return env
+
+    def _read_scheduler_pid():
+        if not scheduler_pid_file.exists():
+            return None
         try:
-            result = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=5)
-            return "start_scheduler" in result.stdout
-        except:
+            return int(scheduler_pid_file.read_text().strip())
+        except Exception:
+            return None
+
+    def _pid_exists(pid: int) -> bool:
+        if not pid or pid <= 0:
             return False
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        except Exception:
+            return False
+        return True
+
+    def check_scheduler_running():
+        pid = _read_scheduler_pid()
+        if pid and _pid_exists(pid):
+            return True
+        if scheduler_pid_file.exists():
+            try:
+                scheduler_pid_file.unlink()
+            except Exception:
+                pass
+        return False
 
     def get_scheduler_pid():
+        pid = _read_scheduler_pid()
+        return [str(pid)] if pid and _pid_exists(pid) else []
+
+    def start_scheduler_process() -> int:
+        env = _load_env_vars()
+        command = [sys.executable, "-c", "from watcher.scheduler import start_scheduler; start_scheduler()"]
+        with open(log_file, "ab") as log_handle:
+            popen_kwargs = {
+                "cwd": str(Path.cwd()),
+                "env": env,
+                "stdout": log_handle,
+                "stderr": subprocess.STDOUT,
+            }
+            if os.name == "nt":
+                popen_kwargs["creationflags"] = (
+                    subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+                )
+            else:
+                popen_kwargs["start_new_session"] = True
+
+            process = subprocess.Popen(command, **popen_kwargs)
+
+        scheduler_pid_file.write_text(str(process.pid))
+        return process.pid
+
+    def stop_scheduler_process() -> None:
+        pid = _read_scheduler_pid()
+        if not pid:
+            return
+
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, text=True, timeout=10)
+        else:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
         try:
-            result = subprocess.run(["pgrep", "-f", "start_scheduler"], capture_output=True, text=True, timeout=5)
-            pids = result.stdout.strip().split('\n')
-            return [p for p in pids if p]
-        except:
-            return []
+            scheduler_pid_file.unlink()
+        except Exception:
+            pass
 
     is_running      = check_scheduler_running()
     scheduler_pids  = get_scheduler_pid()
@@ -577,11 +660,7 @@ elif page == "Scheduler":
     with col1:
         if st.button("Start", disabled=is_running, use_container_width=True, type="primary"):
             try:
-                subprocess.Popen(
-                    ["/bin/bash", "-c",
-                     f"cd {Path.cwd()} && . .venv/bin/activate && nohup python3 -c 'from watcher.scheduler import start_scheduler; start_scheduler()' > scheduler.log 2>&1 &"],
-                    start_new_session=True
-                )
+                start_scheduler_process()
                 st.markdown('<div class="alert alert-success">Scheduler started — running in background.</div>', unsafe_allow_html=True)
                 st.rerun()
             except Exception as e:
@@ -589,8 +668,7 @@ elif page == "Scheduler":
     with col2:
         if st.button("Stop", disabled=not is_running, use_container_width=True):
             try:
-                for pid in scheduler_pids:
-                    subprocess.run(["kill", pid], timeout=5)
+                stop_scheduler_process()
                 st.markdown('<div class="alert alert-success">Scheduler stopped.</div>', unsafe_allow_html=True)
                 st.rerun()
             except Exception as e:
@@ -598,14 +676,9 @@ elif page == "Scheduler":
     with col3:
         if st.button("Restart", disabled=not is_running, use_container_width=True):
             try:
-                for pid in scheduler_pids:
-                    subprocess.run(["kill", pid], timeout=5)
+                stop_scheduler_process()
                 import time; time.sleep(2)
-                subprocess.Popen(
-                    ["/bin/bash", "-c",
-                     f"cd {Path.cwd()} && . .venv/bin/activate && nohup python3 -c 'from watcher.scheduler import start_scheduler; start_scheduler()' > scheduler.log 2>&1 &"],
-                    start_new_session=True
-                )
+                start_scheduler_process()
                 st.markdown('<div class="alert alert-success">Scheduler restarted.</div>', unsafe_allow_html=True)
                 st.rerun()
             except Exception as e:
@@ -613,7 +686,6 @@ elif page == "Scheduler":
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<div class="section-card"><div class="section-title">Live Logs</div>', unsafe_allow_html=True)
-    log_file = Path("scheduler.log")
     if log_file.exists():
         try:
             with open(log_file, 'r') as f:
