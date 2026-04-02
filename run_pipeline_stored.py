@@ -42,7 +42,7 @@ def run_full_pipeline_with_stored():
     # Load configuration
     config = load_config() or {}
     topics = config.get('topics', [])
-    db_path = config.get('database', 'watcher.db')
+    db_path = config.get('sqlite_path', config.get('database', 'watcher.db'))
     
     print(f"\n[CONFIG] Configuration:")
     print(f"   Topics: {topics}")

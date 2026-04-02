@@ -148,6 +148,8 @@ def save_config(config):
     defaults = {
         'provider': 'groq',
         'model': 'llama-3.3-70b-versatile',
+        'sqlite_path': 'watcher.db',
+        'chroma_path': './chroma_db',
         'llm_enabled': True,
         'relevance_threshold': 0.25,
         'items_per_feed': 10,
@@ -181,6 +183,15 @@ if 'config' not in st.session_state:
     st.session_state.config = load_config_file()
 
 config = st.session_state.config
+
+
+def _resolve_db_path() -> Path:
+    """Resolve sqlite_path relative to project folder."""
+    raw = config.get('sqlite_path', 'watcher.db')
+    p = Path(raw)
+    if not p.is_absolute():
+        p = Path(__file__).parent / p
+    return p
 
 # --- Sidebar ---
 with st.sidebar:
@@ -277,7 +288,38 @@ def _header_article_count():
     except:
         return 0
 
-article_count = _header_article_count()
+@st.cache_data(ttl=30)
+def get_article_count():
+    db_path = _resolve_db_path()
+    if not db_path.exists():
+        return 0
+    try:
+        import sqlite3
+        with sqlite3.connect(str(db_path)) as conn:
+            return conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    except:
+        return 0
+
+
+@st.cache_data(ttl=30)
+def get_recent_dashboard_articles(limit: int = 8):
+    """Return recent articles for dashboard preview."""
+    db_path = _resolve_db_path()
+    if not db_path.exists():
+        return []
+    try:
+        import sqlite3
+        with sqlite3.connect(str(db_path)) as conn:
+            c = conn.cursor()
+            c.execute(
+                "SELECT title, source, published, summary FROM items ORDER BY id DESC LIMIT ?",
+                (limit,)
+            )
+            return c.fetchall()
+    except Exception:
+        return []
+
+article_count = get_article_count()
 rss_count = len(config.get('feeds', []))
 prov_model = f"{config.get('provider', 'N/A').upper()} · {config.get('model', 'N/A')}"
 
@@ -352,7 +394,8 @@ if "Dashboard" in page:
         st.markdown('</div></div>', unsafe_allow_html=True)
         
         # System status checks
-        db_exists = Path("watcher.db").exists()
+        db_path_check = _resolve_db_path()
+        db_exists = db_path_check.exists()
         db_status = '<span class="v-badge badge-green">CONNECTED</span>' if db_exists else '<span class="v-badge badge-red">MISSING</span>'
         
         sched_status = '<span class="v-badge badge-amber">STOPPED</span>'
@@ -392,6 +435,7 @@ if "Dashboard" in page:
                         cwd=cwd, env=env, capture_output=True, text=True, check=True
                     )
                     st.success("Pipeline executed successfully!")
+                    get_article_count.clear()
                     with st.expander("View Output Logs"):
                         st.code(result.stdout)
                 except subprocess.CalledProcessError as e:
@@ -471,6 +515,20 @@ if "Dashboard" in page:
     else:
          st.markdown('<div style="text-align:center; padding:2rem; color:#4b5563;"><span>📁</span><br/>Reports directory not found.</div>', unsafe_allow_html=True)
          
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Recent articles directly on Dashboard
+    st.markdown('<div class="v-card"><span class="card-title">Recent Articles</span>', unsafe_allow_html=True)
+    recent_dashboard_articles = get_recent_dashboard_articles(limit=8)
+    if not recent_dashboard_articles:
+        st.info("No articles found in database.")
+    else:
+        for title, source, pub, summary in recent_dashboard_articles:
+            safe_title = title or "Untitled"
+            safe_source = source or "Unknown source"
+            safe_pub = pub or "Unknown date"
+            with st.expander(f"{safe_title} - {safe_source} ({safe_pub})"):
+                st.write(summary if summary else "No summary available.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif "Run Pipeline" in page:
@@ -598,6 +656,7 @@ elif "Run Pipeline" in page:
 
                 if result.returncode == 0 and not has_llm_error:
                     st.success("Pipeline completed successfully!")
+                    get_article_count.clear()
                     
                     # Optional: metric counts could be parsed from stdout if needed
                     st.metric("Pipeline Status", "Completed")

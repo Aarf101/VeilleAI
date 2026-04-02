@@ -13,7 +13,7 @@ _EMB_PROVIDER = None
 _CHROMA_DIR = None
 try:
     cfg = _config.load_config()
-    _CHROMA_DIR = cfg.get("chroma_persist_dir") if cfg else None
+    _CHROMA_DIR = (cfg.get("chroma_path") or cfg.get("chroma_persist_dir")) if cfg else None
 except Exception:
     _CHROMA_DIR = None
 try:

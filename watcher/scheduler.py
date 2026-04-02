@@ -103,7 +103,7 @@ def start_scheduler(cfg_path: str | None = None) -> None:
         cfg = _config.sample_default()
 
     # period in minutes (default daily)
-    minutes = int(cfg.get("run_every_minutes", 24 * 60))
+    minutes = int(cfg.get("schedule_interval_minutes", cfg.get("run_every_minutes", 24 * 60)))
 
     scheduler = BackgroundScheduler()
 
