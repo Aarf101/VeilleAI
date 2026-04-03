@@ -120,7 +120,9 @@ class CollectorAgent:
 
         all_rss_entries: List[Dict] = []
         with ThreadPoolExecutor(max_workers=min(15, len(feeds) or 1)) as executor:
-            futures = [executor.submit(_fetch_one_rss, f) for f in feeds]
+            feeds_enabled = config.get('feeds_enabled', {})
+            active_feeds = [f for f in feeds if feeds_enabled.get(f, True)]
+            futures = [executor.submit(_fetch_one_rss, f) for f in active_feeds]
             for future in as_completed(futures):
                 all_rss_entries.extend(future.result())
 

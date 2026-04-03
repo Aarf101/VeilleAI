@@ -1,12 +1,5 @@
 chroma_path: ./chroma_db
 feeds:
-- https://techcrunch.com/feed/
-- https://www.wired.com/feed/rss
-- https://www.theverge.com/rss/index.xml
-- https://feeds.arstechnica.com/arstechnica/index
-- https://news.ycombinator.com/rss
-- https://techcrunch.com/category/artificial-intelligence/feed/
-- https://venturebeat.com/category/ai/feed/
 - https://www.artificialintelligence-news.com/feed/
 - https://huggingface.co/blog/feed.xml
 - https://feeds.feedburner.com/TheHackersNews
@@ -27,6 +20,32 @@ feeds:
 - https://news.google.com/rss/search?q=Data+Protection&hl=fr&gl=FR&ceid=FR:fr
 - https://news.google.com/rss/search?q=Cybersecurity&hl=fr&gl=FR&ceid=FR:fr
 - https://krebsonsecurity.com/feed/
+- https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw
+- https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA
+- https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA
+feeds_enabled: {}
+feeds_weight:
+  https://arxiv.org/rss/cs.AI: 1.6
+  https://coindesk.com/arc/outboundfeeds/rss/: 1.9
+  https://cointelegraph.com/rss: 2.0
+  https://feeds.feedburner.com/TheHackersNews: 0.9
+  https://feeds.feedburner.com/venturebeat/SZY: 1.7
+  https://krebsonsecurity.com/feed/: 0.7
+  https://news.google.com/rss/search?q=Cryptocurrency&hl=fr&gl=FR&ceid=FR:fr: 0.4
+  https://news.google.com/rss/search?q=Cybersecurity&hl=fr&gl=FR&ceid=FR:fr: 1.2
+  https://news.google.com/rss/search?q=Data+Protection&hl=fr&gl=FR&ceid=FR:fr: 0.7
+  https://news.google.com/rss/search?q=Encryption&hl=fr&gl=FR&ceid=FR:fr: 0.6
+  https://news.google.com/rss/search?q=Fintech&hl=fr&gl=FR&ceid=FR:fr: 0.2
+  https://news.google.com/rss/search?q=Privacy&hl=fr&gl=FR&ceid=FR:fr: 1.4
+  https://news.google.com/rss/search?q=Startup+Funding&hl=fr&gl=FR&ceid=FR:fr: 0.4
+  https://news.google.com/rss/search?q=Stock+Market&hl=fr&gl=FR&ceid=FR:fr: 1.6
+  https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:f: 0.4
+  https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:fr: 1.6
+  https://news.google.com/rss/search?q=Venture+Capital&hl=fr&gl=FR&ceid=FR:fr: 1.7
+  https://www.bleepingcomputer.com/feed/: 0.6
+  https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: 0.4
+  https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA: 1.1
+  https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw: 0.6
 items_per_feed: 30
 llm_enabled: true
 max_articles_to_llm: 56
@@ -46,3 +65,14 @@ topics:
 - Privacy
 - Encryption
 - Threat Detection
+
+recency_boost: true
+topic_blacklist:
+  - smartphone
+  - galaxy
+  - iphone
+  - samsung display
+  - electric vehicle
+  - football
+  - fashion
+  - recipe

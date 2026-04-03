@@ -2,9 +2,10 @@ from functools import lru_cache
 
 class SmartFilter:
     
-    def __init__(self, topics, threshold=0.30):
+    def __init__(self, topics, threshold=0.30, config=None):
         self.topics = topics
         self.threshold = threshold
+        self.config = config or {}
         self.model = self._load_model()
     
     @staticmethod
@@ -73,37 +74,64 @@ class SmartFilter:
             return False
     
     def match_article_to_topic(self, article, topic):
+        config_obj = getattr(self, 'config', {}) or {}
+        blacklist = config_obj.get('topic_blacklist', [
+            'smartphone', 'galaxy', 'iphone', 'samsung display',
+            'electric vehicle', 'football', 'fashion', 'recipe'
+        ])
+        title_lower = (article.get('title', '') or '').lower()
+        if any(word.lower() in title_lower for word in blacklist):
+            return False, 0.0, 'blacklisted'
+
         if article.get('skip_filter', False):
             return True, 1.0, 'google_news_bypass'
             
         # METHOD 1: Google News pre-filtered feed
         if self.is_from_google_news_topic(article, topic):
-            return True, 1.0, 'google_news'
-        
-        # METHOD 2: Direct keyword match in title
-        title = (article.get('title', '') or '').lower()
-        topic_words = [
-            w.lower() for w in topic.split() 
-            if len(w) > 2
-        ]
-        title_match = any(w in title for w in topic_words)
-        if title_match:
-            return True, 0.9, 'title_keyword'
-        
-        # METHOD 3: Keyword in full text
-        kw_score = self.keyword_score(article, topic)
-        if kw_score >= 0.5:
-            return True, kw_score, 'keyword'
-        
-        # METHOD 4: Semantic similarity
-        sem_score = self.semantic_score(article, topic)
-        if sem_score >= self.threshold:
-            return True, sem_score, 'semantic'
-        
-        # Combined score check
-        combined = (kw_score * 0.6) + (sem_score * 0.4)
-        if combined >= 0.35:
-            return True, combined, 'combined'
+            final_score = 1.0
+            method = 'google_news'
+        else:
+            # METHOD 2: Direct keyword match in title
+            title = (article.get('title', '') or '').lower()
+            topic_words = [
+                w.lower() for w in topic.split() 
+                if len(w) > 2
+            ]
+            title_match = any(w in title for w in topic_words)
+            if title_match:
+                final_score = 0.9
+                method = 'title_keyword'
+            else:
+                # METHOD 3: Keyword in full text
+                kw_score = self.keyword_score(article, topic)
+                if kw_score >= 0.5:
+                    final_score = kw_score
+                    method = 'keyword'
+                else:
+                    # METHOD 4: Semantic similarity
+                    sem_score = self.semantic_score(article, topic)
+                    if sem_score >= self.threshold:
+                        final_score = sem_score
+                        method = 'semantic'
+                    else:
+                        # Combined score check
+                        combined = (kw_score * 0.6) + (sem_score * 0.4)
+                        if combined >= 0.35:
+                            final_score = combined
+                            method = 'combined'
+                        else:
+                            return False, 0.0, 'rejected'
+
+        # Apply source weight multiplication
+        feed_url = article.get('feed_url', '') or article.get('source', '')
+        config_obj = getattr(self, 'config', {}) or {}
+        feeds_weight = config_obj.get('feeds_weight', {})
+        weight = feeds_weight.get(feed_url, 1.0)
+        final_score = final_score * weight
+
+        # Final threshold check after weighting
+        if final_score >= self.threshold:
+            return True, final_score, method
         
         return False, 0.0, 'rejected'
     

@@ -1199,6 +1199,18 @@ elif "Data Sources" in page:
             save_config(st.session_state.config)
             st.rerun()
             
+        if st.button("Add YouTube Tech Channels", use_container_width=True):
+            yt_feeds = [
+                "https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw",
+                "https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA",
+                "https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA",
+            ]
+            for yf in yt_feeds:
+                if yf not in st.session_state.config['feeds']:
+                    st.session_state.config['feeds'].append(yf)
+            save_config(st.session_state.config)
+            st.rerun()
+            
     with p2: 
         if st.button("Add Top Tech News Feeds", use_container_width=True):
             tech_feeds = [
@@ -1218,16 +1230,43 @@ elif "Data Sources" in page:
     st.markdown('<div class="v-card"><span class="card-title">ALL RSS FEEDS</span>', unsafe_allow_html=True)
     if not st.session_state.config['feeds']:
         st.markdown('<span style="color:#6b7280; font-size:0.85rem;">[No feeds currently configured]</span>', unsafe_allow_html=True)
-        
+
+    feeds_enabled = st.session_state.config.get('feeds_enabled', {})
+    feeds_weight = st.session_state.config.get('feeds_weight', {})
+
+    changed = False
     for i, f in enumerate(st.session_state.config['feeds']):
-        col1, col2 = st.columns([5, 1])
-        with col1: st.markdown(f'<div class="v-list-item" style="border:none; font-size:0.85rem; color:#9ca3af; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{f}">{f}</div>', unsafe_allow_html=True)
-        with col2: 
+        col_toggle, col_url, col_weight, col_del = st.columns([1, 4, 2, 1])
+        
+        with col_toggle:
+            enabled = st.toggle("", value=feeds_enabled.get(f, True), key=f"toggle_{i}_{f}", label_visibility="collapsed")
+            if feeds_enabled.get(f, True) != enabled:
+                feeds_enabled[f] = enabled
+                changed = True
+        
+        with col_url:
+            color = "#9ca3af" if feeds_enabled.get(f, True) else "#4b5563"
+            st.markdown(f'<div class="v-list-item" style="border:none; font-size:0.8rem; color:{color}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{f}">{f}</div>', unsafe_allow_html=True)
+        
+        with col_weight:
+            w = st.slider("", 0.1, 2.0, float(feeds_weight.get(f, 1.0)), 0.1, key=f"weight_{i}_{f}", label_visibility="collapsed")
+            if feeds_weight.get(f, 1.0) != w:
+                feeds_weight[f] = w
+                changed = True
+        
+        with col_del:
             if st.button("✕", key=f"delete_feed_{i}_{f}"):
                 st.session_state.config['feeds'].pop(i)
-                save_config(st.session_state.config)
-                st.rerun()
-        
+                feeds_enabled.pop(f, None)
+                feeds_weight.pop(f, None)
+                changed = True
+
+    if changed:
+        st.session_state.config['feeds_enabled'] = feeds_enabled
+        st.session_state.config['feeds_weight'] = feeds_weight
+        save_config(st.session_state.config)
+        st.rerun()
+
     st.markdown("<hr style='border-color: rgba(255,255,255,0.07);'>", unsafe_allow_html=True)
     
     # --- 6. ADD FEED MANUALLY ---

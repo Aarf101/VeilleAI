@@ -22,6 +22,15 @@ def load_env_file():
 load_env_file()  # call this FIRST before anything else
 
 import sys
+try:
+    import sgmllib
+except ImportError:
+    try:
+        import sgmllib3k as sgmllib
+        sys.modules['sgmllib'] = sgmllib
+    except ImportError:
+        pass
+
 import io
 
 sys.stdout = io.TextIOWrapper(
@@ -61,12 +70,14 @@ def get_recent_articles_from_db(config, days=7):
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("""
-            SELECT title, link as url, 
+            SELECT title, url, 
                    published, summary, source
             FROM items 
             WHERE published >= date('now', '-7 days')
             OR published >= datetime('now', '-7 days')
-            ORDER BY published DESC
+            OR published IS NULL
+            OR published = ''
+            ORDER BY id DESC
             LIMIT 200
         """)
         rows = c.fetchall()
@@ -86,6 +97,40 @@ def get_recent_articles_from_db(config, days=7):
     except Exception as e:
         safe_print(f"DB error: {e}")
         return []
+
+def apply_recency_boost(articles, config):
+    if not config.get('recency_boost', False):
+        return articles
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    for art in articles:
+        bonus = 0.0
+        pub = art.get('published', '') or ''
+        try:
+            # Try multiple common formats
+            for fmt in ('%a, %d %b %Y %H:%M:%S %z', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%d'):
+                try:
+                    # Clean the string for strptime (some RSS add extra stuff)
+                    dt = datetime.strptime(pub[:25].strip(), fmt)
+                    if dt.tzinfo:
+                        dt = dt.replace(tzinfo=None)
+                    age_days = (now - dt).days
+                    if age_days == 0:
+                        bonus = 0.15
+                    elif age_days == 1:
+                        bonus = 0.10
+                    elif age_days > 7:
+                        bonus = -0.05
+                    break
+                except:
+                    continue
+        except:
+            pass
+        art['recency_bonus'] = bonus
+        # Weighting relevance_score if it exists
+        current_score = art.get('relevance_score', 0.5)
+        art['relevance_score'] = round(min(1.0, max(0.0, current_score + bonus)), 2)
+    return articles
 
 def collect_all_feeds(config):
     db_path = config.get(
@@ -211,18 +256,45 @@ def run_pipeline(config):
     
     # Step 2: Smart filter per topic
     safe_print("Step 2: Filtering by topic...")
-    smart_filter = SmartFilter(topics, threshold)
+    smart_filter = SmartFilter(topics, threshold, config)
     filtered_by_topic = smart_filter.filter_all(articles)
     
-    seen_urls = set()
-    for topic in topics:
-        unique_articles = []
-        for art in filtered_by_topic.get(topic, []):
-            url = art.get('url','') or art.get('link','')
-            if url not in seen_urls:
-                seen_urls.add(url)
-                unique_articles.append(art)
-        filtered_by_topic[topic] = unique_articles
+    # Apply recency boost to all matched articles
+    for topic in filtered_by_topic:
+        filtered_by_topic[topic] = apply_recency_boost(filtered_by_topic[topic], config)
+
+    # Cross-topic deduplication
+    seen_urls = {} # url -> best_article_object
+    for topic, arts in filtered_by_topic.items():
+        for art in arts:
+            url = art.get('url', '') or art.get('link', '')
+            if not url: continue
+            
+            if url in seen_urls:
+                existing = seen_urls[url]
+                # If current match is better, swap
+                if art.get('relevance_score', 0) > existing.get('relevance_score', 0):
+                    # Add old topic to also_relevant
+                    art['also_relevant_for'] = art.get('also_relevant_for', [])
+                    if existing.get('matched_topic') not in art['also_relevant_for']:
+                        art['also_relevant_for'].append(existing.get('matched_topic'))
+                    seen_urls[url] = art
+                else:
+                    # Current is worse, just add current topic to existing's also_relevant
+                    existing['also_relevant_for'] = existing.get('also_relevant_for', [])
+                    if topic not in existing['also_relevant_for']:
+                        existing['also_relevant_for'].append(topic)
+            else:
+                seen_urls[url] = art
+
+    # Rebuild filtered_by_topic using only the "best" versions
+    new_filtered = {topic: [] for topic in topics}
+    for url, art in seen_urls.items():
+        best_topic = art.get('matched_topic')
+        if best_topic in new_filtered:
+            new_filtered[best_topic].append(art)
+    
+    filtered_by_topic = new_filtered
     
     # Log results
     safe_print(f"Step 2 results:")

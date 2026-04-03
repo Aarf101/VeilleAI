@@ -1,10 +1,11 @@
-"""Simple RSS collector - uses feedparser if available."""
-from typing import List
+import requests
+import xml.etree.ElementTree as ET
+import socket
 from datetime import datetime
 import logging
+import re
 
 logger = logging.getLogger(__name__)
-
 
 def _fetch_article_content(url: str, timeout: int = 3) -> str:
     """Fetch full article content from URL using web scraping.
@@ -17,7 +18,6 @@ def _fetch_article_content(url: str, timeout: int = 3) -> str:
         Extracted article text or empty string if failed
     """
     try:
-        import requests
         from bs4 import BeautifulSoup
         
         headers = {
@@ -64,25 +64,9 @@ def _fetch_article_content(url: str, timeout: int = 3) -> str:
         logger.debug(f"Failed to fetch article content from {url}: {e}")
         return ""
 
-
-import socket
-
-def fetch_feed_with_timeout(url, timeout=10):
-    try:
-        socket.setdefaulttimeout(timeout)
-        import feedparser
-        feed = feedparser.parse(url)
-        return feed
-    except Exception as e:
-        print(f"SKIPPED feed {url}: {e}")
-        return None
-    finally:
-        socket.setdefaulttimeout(None)
-
 def _fetch_summary_from_url(url: str, timeout: int = 5) -> str:
     """Fetch real article URL and extract first 300 words if summary is empty."""
     try:
-        import requests
         from bs4 import BeautifulSoup
         
         headers = {
@@ -107,61 +91,98 @@ def _fetch_summary_from_url(url: str, timeout: int = 5) -> str:
         logger.debug(f"Failed to fetch summary from webpage {url}: {e}")
         return ""
 
-def fetch_rss(feed_url: str, max_items: int = 10) -> list[dict]:
+def fetch_feed_with_timeout(url, timeout=10):
     try:
-        import feedparser
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'}
+        response = requests.get(url, headers=headers, timeout=timeout)
+        response.raise_for_status()
+        return response.content
     except Exception as e:
-        raise ImportError(
-            "feedparser is required for RSS collection. Install with: pip install feedparser"
-        ) from e
+        logger.warning(f"SKIPPED feed {url}: {e}")
+        return None
 
-    parsed = fetch_feed_with_timeout(feed_url, timeout=10)
-    if not parsed:
+def _parse_rss_xml(content):
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as e:
+        logger.warning(f"XML parse error: {e}")
+        return [], ""
+    
+    ns = {'atom': 'http://www.w3.org/2005/Atom',
+          'media': 'http://search.yahoo.com/mrss/'}
+    
+    # Detect feed type
+    tag = root.tag.lower()
+    entries = []
+    feed_title = ""
+    
+    if 'rss' in tag or root.find('channel') is not None:
+        # RSS format
+        channel = root.find('channel')
+        if channel is None:
+            return [], ""
+        feed_title = (channel.findtext('title') or '').strip()
+        for item in channel.findall('item'):
+            entries.append({
+                'title': (item.findtext('title') or '').strip(),
+                'link': (item.findtext('link') or '').strip(),
+                'published': (item.findtext('pubDate') or item.findtext('dc:date') or '').strip(),
+                'summary': (item.findtext('description') or '').strip(),
+                'content': (item.findtext('content:encoded') or item.findtext('description') or '').strip(),
+            })
+    elif 'feed' in tag:
+        # Atom format
+        feed_title_el = root.find('atom:title', ns) or root.find('title')
+        feed_title = (feed_title_el.text if feed_title_el is not None else '').strip()
+        for entry in (root.findall('atom:entry', ns) or root.findall('entry')):
+            link_el = entry.find('atom:link', ns) or entry.find('link')
+            link = ''
+            if link_el is not None:
+                link = link_el.get('href', '') or link_el.text or ''
+            title_el = entry.find('atom:title', ns) or entry.find('title')
+            summary_el = entry.find('atom:summary', ns) or entry.find('summary')
+            content_el = entry.find('atom:content', ns) or entry.find('content')
+            published_el = entry.find('atom:published', ns) or entry.find('published') or entry.find('updated')
+            entries.append({
+                'title': (title_el.text if title_el is not None else '').strip(),
+                'link': link.strip(),
+                'published': (published_el.text if published_el is not None else '').strip(),
+                'summary': (summary_el.text if summary_el is not None else '').strip(),
+                'content': (content_el.text if content_el is not None else '').strip(),
+            })
+    
+    return entries, feed_title
+
+def fetch_rss(feed_url: str, max_items: int = 10) -> list[dict]:
+    content = fetch_feed_with_timeout(feed_url, timeout=10)
+    if not content:
         return []
-
+    
+    entries, feed_title = _parse_rss_xml(content)
+    source = feed_title or feed_url
+    
     items = []
-    source = parsed.feed.get("title") if getattr(parsed, "feed", None) else feed_url
-    import re
-    for entry in parsed.entries[:max_items]:
-        summary = entry.get("summary", "")
-        content = _extract_content(entry)
-        link = entry.get("link", "")
+    for entry in entries[:max_items]:
+        link = entry.get('link', '')
+        summary = entry.get('summary', '')
+        content = entry.get('content', '') or summary
         
-        # If summary is too short, try fetching from the real page
+        # If summary too short, try fetching from real page
         clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
         if len(clean_summary) < 50 and link:
-            logger.debug(f"Summary too short, fetching real page: {link}")
             new_summary = _fetch_summary_from_url(link, timeout=5)
             if new_summary:
                 summary = new_summary
-                
-        # If content is too short, try fetching full article
-        if len(content) < 200 and link:
-            logger.debug(f"Fetching full content for: {entry.get('title', 'Unknown')}")
-            full_content = _fetch_article_content(link)
-            if len(full_content) > len(content):
-                content = full_content
         
-        items.append(
-            {
-                "title": entry.get("title", ""),
-                "link": link,
-                "published": entry.get("published", entry.get("updated", None)),
-                "summary": summary,
-                "content": content,
-                "source": source,
-                "feed_url": feed_url,
-                "fetched_at": datetime.utcnow().isoformat() + "Z",
-            }
-        )
+        items.append({
+            'title': entry.get('title', ''),
+            'link': link,
+            'published': entry.get('published', ''),
+            'summary': summary,
+            'content': content,
+            'source': source,
+            'feed_url': feed_url,
+            'fetched_at': datetime.utcnow().isoformat() + 'Z',
+        })
+    
     return items
-
-
-def _extract_content(entry) -> str:
-    # feedparser may expose content[] for full text
-    if "content" in entry and entry.content:
-        try:
-            return entry.content[0].value
-        except Exception:
-            return str(entry.get("summary", ""))
-    return str(entry.get("summary", ""))
