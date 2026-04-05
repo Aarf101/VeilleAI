@@ -28,7 +28,7 @@ from typing import Optional
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from run_full_pipeline import run_full_pipeline
+from run_full_pipeline import run_pipeline
 
 
 class SchedulerAgent:
@@ -55,7 +55,7 @@ class SchedulerAgent:
         print("=" * 80)
 
         try:
-            run_full_pipeline()
+            run_pipeline(self.config)
             results = {"status": "success"}
         except Exception as e:
             print(f"[SchedulerAgent] Pipeline execution failed: {e}")

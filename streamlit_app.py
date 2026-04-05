@@ -5,6 +5,10 @@ import glob
 import time
 import urllib.parse
 from pathlib import Path
+from watcher.agents.synthesizer import call_llm
+
+import requests
+from pathlib import Path
 
 def load_dotenv_vars():
     env_vars = {}
@@ -17,6 +21,24 @@ def load_dotenv_vars():
                     key, value = line.split('=', 1)
                     env_vars[key.strip()] = value.strip()
     return env_vars
+
+def save_api_key_to_env(key_name, key_value):
+    env_path = Path('.env')
+    lines = []
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            lines = f.readlines()
+    # Update existing or add new
+    found = False
+    for i, line in enumerate(lines):
+        if line.startswith(key_name + '='):
+            lines[i] = f"{key_name}={key_value}\n"
+            found = True
+            break
+    if not found:
+        lines.append(f"{key_name}={key_value}\n")
+    with open(env_path, 'w') as f:
+        f.writelines(lines)
 
 def get_available_providers():
     available = {}
@@ -167,7 +189,20 @@ def save_config(config):
         if 'feeds' in config:
             config['feeds'] = list(dict.fromkeys(config['feeds']))
         if 'topics' in config:
-            config['topics'] = list(dict.fromkeys(config['topics']))
+            seen_names = set()
+            new_topics = []
+            for t in config['topics']:
+                if isinstance(t, dict):
+                    name = t.get('name', '')
+                    desc = t.get('description', '')
+                else:
+                    name = t
+                    desc = ""
+                
+                if name and name.lower() not in seen_names:
+                    new_topics.append({"name": name, "description": desc})
+                    seen_names.add(name.lower())
+            config['topics'] = new_topics
             
         with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             yaml.dump(config, f,
@@ -181,6 +216,11 @@ def save_config(config):
 
 if 'config' not in st.session_state:
     st.session_state.config = load_config_file()
+
+if 'new_topic_name' not in st.session_state:
+    st.session_state.new_topic_name = ''
+if 'new_topic_description' not in st.session_state:
+    st.session_state.new_topic_description = ''
 
 config = st.session_state.config
 
@@ -390,7 +430,8 @@ if "Dashboard" in page:
             try: saved_topics = yaml.safe_load(open(CONFIG_PATH)).get("topics", [])
             except: pass
         for t in saved_topics:
-            st.markdown(f'<span class="topic-tag">{t}</span>', unsafe_allow_html=True)
+            topic_name = t['name'] if isinstance(t, dict) else t
+            st.markdown(f'<span class="topic-tag">{topic_name}</span>', unsafe_allow_html=True)
         st.markdown('</div></div>', unsafe_allow_html=True)
         
         # System status checks
@@ -625,7 +666,8 @@ elif "Run Pipeline" in page:
         try: active_topics = yaml.safe_load(open(CONFIG_PATH)).get('topics', [])
         except: pass
     if active_topics:
-        st.markdown(f'<div class="topic-container" style="margin-bottom:1rem;">{"".join([f"<span class=topic-tag>{t}</span>" for t in active_topics])}</div>', unsafe_allow_html=True)
+        topic_tags = "".join([f"<span class=topic-tag>{t['name'] if isinstance(t, dict) else t}</span>" for t in active_topics])
+        st.markdown(f'<div class="topic-container" style="margin-bottom:1rem;">{topic_tags}</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="v-alert alert-warn">⚠ No topics configured — your report may not be focused. Go to Topics page to add some.</div>', unsafe_allow_html=True)
     
@@ -1045,148 +1087,89 @@ elif "Scheduler" in page:
         st.code("sudo systemctl restart veilleai.service\nsudo journalctl -u veilleai -f")
 
 elif "Topics" in page:
-    st.markdown('<div class="v-card"><span class="card-title">Topics Configuration</span>', unsafe_allow_html=True)
+    st.markdown('<div class="v-card"><span class="card-title">YOUR TOPICS</span>', unsafe_allow_html=True)
     
-    if 'topics' not in st.session_state.config:
-        st.session_state.config['topics'] = []
+    if not st.session_state.config.get('topics', []):
+        st.info("No topics configured. Add one below.")
     
-    # Auto-cleanup short names
-    cleaned_topics = [t for t in st.session_state.config['topics'] if len(t.strip()) >= 2]
-    if len(cleaned_topics) != len(st.session_state.config['topics']):
-        st.session_state.config['topics'] = cleaned_topics
-    
-    for t in st.session_state.config['topics']:
-        col1, col2 = st.columns([4, 1])
-        with col1: st.markdown(f'<div class="v-list-item" style="border:none;">{t}</div>', unsafe_allow_html=True)
-        with col2: 
-            if st.button("✕", key=f"del_t_{t}"):
-                st.session_state.config['topics'].remove(t)
-                st.rerun()
-    
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.07);'>", unsafe_allow_html=True)
-    
-    new_topic = st.text_input("Add New Topic", placeholder="Enter topic...")
-    if st.button("Add Topic", type="primary"):
-        if new_topic and new_topic.strip() and new_topic not in st.session_state.config['topics']:
-            st.session_state.config['topics'].append(new_topic.strip())
-            st.rerun()
-            
-    st.markdown('<span class="card-title mt-2">Presets</span>', unsafe_allow_html=True)
-    p1, p2, p3, p4 = st.columns(4)
-    with p1: 
-        if st.button("AI/ML"):
-            st.session_state.config['topics'] = ["Artificial Intelligence", "Machine Learning", "Deep Learning", "Neural Networks", "Generative AI"]
-            st.rerun()
-    with p2: 
-        if st.button("Tech General"):
-            st.session_state.config['topics'] = ["Software Development", "Programming", "Technology Innovation", "Web Development", "Cloud Computing"]
-            st.rerun()
-    with p3: 
-        if st.button("Security"):
-            st.session_state.config['topics'] = ["Cybersecurity", "Data Protection", "Privacy", "Encryption", "Threat Detection"]
-            st.rerun()
-    with p4: 
-        if st.button("Finance"):
-            st.session_state.config['topics'] = ["Fintech", "Cryptocurrency", "Stock Market", "Venture Capital", "Startup Funding"]
-            st.rerun()
-    
-    st.markdown('<span class="card-title mt-2">Live Preview</span>', unsafe_allow_html=True)
-    st.markdown(f'<div class="topic-container">{"".join([f"<span class=topic-tag>{t}</span>" for t in st.session_state.config["topics"]])}</div>', unsafe_allow_html=True)
-    
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.07);'>", unsafe_allow_html=True)
-    if st.button("Save Configuration", type="primary", use_container_width=True):
-        save_config(st.session_state.config)
-        st.success("Saved!")
+    for t in st.session_state.config.get('topics', []):
+        name = t.get('name', t) if isinstance(t, dict) else t
+        description = t.get('description', 'No description') if isinstance(t, dict) else "No description"
         
+        col_text, col_del = st.columns([10, 1])
+        with col_text:
+            st.markdown(f'<div style="font-weight:bold; font-size:16px;">{name}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="color:gray; font-size:12px; margin-bottom:10px;">{description}</div>', unsafe_allow_html=True)
+        with col_del:
+            if st.button("✕", key=f"del_topic_{name}"):
+                st.session_state.config['topics'].remove(t)
+                save_config(st.session_state.config)
+                st.rerun()
+                
+    st.markdown("<hr/>", unsafe_allow_html=True)
+    
+    st.markdown('<div class="v-card"><span class="card-title">ADD NEW TOPIC</span>', unsafe_allow_html=True)
+    
+    topic_name = st.text_input("Topic name", value=st.session_state.new_topic_name, placeholder="e.g. Artificial Intelligence")
+    topic_description = st.text_area("Keywords / Description", value=st.session_state.new_topic_description, placeholder="Auto-generate or type keywords...", height=100)
+    
+    col_gen, col_add = st.columns(2)
+    with col_gen:
+        if st.button("✨ Auto-generate with AI", use_container_width=True):
+            if topic_name:
+                with st.spinner("Generating..."):
+                    prompt = f"Generate exactly 15 technical keywords for monitoring the topic: '{topic_name}'. Return ONLY the keywords separated by spaces. No explanation. No numbers. No bullets."
+                    try:
+                        result = call_llm(prompt, config)
+                        import re
+                        result = re.sub(r'<think>.*?</think>', '', result, flags=re.IGNORECASE|re.DOTALL).strip()
+                        st.session_state.new_topic_description = result
+                        st.session_state.new_topic_name = topic_name
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Generation error: {e}")
+            else:
+                st.warning("Enter a topic name first.")
+                
+    with col_add:
+        if st.button("+ Add Topic", type="primary", use_container_width=True):
+            if topic_name and topic_description:
+                # Duplicate check
+                existing = [t.get('name', t).lower() if isinstance(t, dict) else t.lower() for t in st.session_state.config['topics']]
+                if topic_name.lower() not in existing:
+                    st.session_state.config['topics'].append({"name": topic_name, "description": topic_description})
+                    save_config(st.session_state.config)
+                    st.session_state.new_topic_name = ''
+                    st.session_state.new_topic_description = ''
+                    st.success(f"Added {topic_name}!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Topic already exists.")
+            else:
+                st.warning("Please provide name and description.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif "Data Sources" in page:
-    if 'feeds' not in st.session_state.config:
-        st.session_state.config['feeds'] = []
-    if 'topics' not in st.session_state.config:
-        st.session_state.config['topics'] = []
-
-    # --- 1. MONITOR ANY TOPIC ---
-    st.markdown('<div class="v-card"><span class="card-title" style="color:#60a5fa;">MONITOR ANY TOPIC</span>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.85rem; color:#9ca3af; margin-bottom:0.5rem;">Type anything you want to follow:</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([3, 1, 1])
-    with c1: 
-        custom_topic = st.text_input("", label_visibility="collapsed")
-    with c2: 
-        language_options = {
-            "🇫🇷 Français": {"hl": "fr", "gl": "FR", "ceid": "FR:fr"},
-            "🇬🇧 English":  {"hl": "en", "gl": "US", "ceid": "US:en"},
-            "🇪🇸 Español":  {"hl": "es", "gl": "ES", "ceid": "ES:es"},
-            "🇩🇪 Deutsch":  {"hl": "de", "gl": "DE", "ceid": "DE:de"},
-        }
-        
-        # Migrate old config label if it exists
-        current_lang_label = config.get('news_language', "🇫🇷 Français")
-        if current_lang_label == "🇫🇷 FR": current_lang_label = "🇫🇷 Français"
-        elif current_lang_label == "🇬🇧 EN": current_lang_label = "🇬🇧 English"
-        elif current_lang_label == "🇪🇸 ES": current_lang_label = "🇪🇸 Español"
-        elif current_lang_label == "🇩🇪 DE": current_lang_label = "🇩🇪 Deutsch"
-        
-        if current_lang_label not in language_options: current_lang_label = "🇫🇷 Français"
-        selected_lang = st.selectbox("", list(language_options.keys()), index=list(language_options.keys()).index(current_lang_label), label_visibility="collapsed")
-        lang_params = language_options[selected_lang]
-        
-        if selected_lang != current_lang_label:
-            st.session_state.config['news_language'] = selected_lang
-            save_config(st.session_state.config)
-            st.rerun()
-
-    with c3:
-        if st.button("+ Add", type="primary", use_container_width=True):
-            if custom_topic and custom_topic.strip():
-                topic_clean = custom_topic.strip()
-                hl = lang_params["hl"]
-                gl = lang_params["gl"]
-                ceid = lang_params["ceid"]
-                encoded = urllib.parse.quote(topic_clean)
-                rss_url = f"https://news.google.com/rss/search?q={encoded}&hl={hl}&gl={gl}&ceid={ceid}"
-                
-                if rss_url not in st.session_state.config['feeds']:
-                    st.session_state.config['feeds'].append(rss_url)
-                if topic_clean not in st.session_state.config['topics']:
-                    st.session_state.config['topics'].append(topic_clean)
-                    
+    st.markdown('<div class="v-card"><span class="card-title">ADD NEW FEED</span>', unsafe_allow_html=True)
+    new_feed_url = st.text_input("Feed URL", placeholder="https://...")
+    if st.button("Add Feed", type="primary"):
+        if new_feed_url and new_feed_url.strip():
+            url = new_feed_url.strip()
+            if url not in st.session_state.config.get('feeds', []):
+                st.session_state.config['feeds'].append(url)
                 save_config(st.session_state.config)
-                st.success(f"Now monitoring '{topic_clean}' — feed and topic added!")
-                time.sleep(1.5)
+                st.success(f"Added {url}!")
                 st.rerun()
+            else:
+                st.warning("Feed already exists.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-
-
-    # --- 3. SMART SUGGESTIONS ---
-    suggestions = []
-    for t in st.session_state.config['topics']:
-        encoded_t = urllib.parse.quote(t)
-        if not any(encoded_t.lower() in f.lower() or urllib.parse.quote(t.lower()) in f.lower() for f in st.session_state.config['feeds']):
-            suggestions.append(t)
-            
-    if suggestions:
-        st.markdown('<div class="v-card" style="border-left: 3px solid #f59e0b;"><span class="card-title" style="color:#f59e0b;">💡 SUGGESTED FEEDS BASED ON YOUR TOPICS</span>', unsafe_allow_html=True)
-        for t in suggestions:
-            c1, c2 = st.columns([3, 2])
-            with c1: st.markdown(f'<div class="v-list-item" style="border:none;">You monitor "{t}" but have no feed for it</div>', unsafe_allow_html=True)
-            with c2:
-                if st.button(f"+ Add Google News: {t}", key=f"suggest_{t}", use_container_width=True):
-                    encoded = urllib.parse.quote(t)
-                    rss_url = f"https://news.google.com/rss/search?q={encoded}&hl={hl}&gl={gl}&ceid={gl}:{hl}"
-                    if rss_url not in st.session_state.config['feeds']:
-                        st.session_state.config['feeds'].append(rss_url)
-                        save_config(st.session_state.config)
-                        st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- 4. PRESETS BY CATEGORY ---
-    st.markdown('<div class="v-card"><span class="card-title">PRESETS BY CATEGORY</span>', unsafe_allow_html=True)
-    p1, p2 = st.columns(2)
-    with p1: 
-        if st.button("Add Popular AI News Feeds", use_container_width=True):
-            ai_feeds = [
+    st.markdown('<div class="v-card"><span class="card-title">PRESETS</span>', unsafe_allow_html=True)
+    p1, p2, p3 = st.columns(3)
+    with p1:
+        if st.button("Popular AI Feeds", use_container_width=True):
+            feeds = [
                 "https://techcrunch.com/category/artificial-intelligence/feed/",
                 "https://venturebeat.com/category/ai/feed/",
                 "https://www.artificialintelligence-news.com/feed/",
@@ -1194,107 +1177,95 @@ elif "Data Sources" in page:
                 "https://arxiv.org/rss/cs.AI",
                 "https://huggingface.co/blog/feed.xml"
             ]
-            for mf in ai_feeds:
-                if mf not in st.session_state.config['feeds']: st.session_state.config['feeds'].append(mf)
-            save_config(st.session_state.config)
-            st.rerun()
-            
-        if st.button("Add YouTube Tech Channels", use_container_width=True):
-            yt_feeds = [
-                "https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw",
-                "https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA",
-                "https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA",
-            ]
-            for yf in yt_feeds:
-                if yf not in st.session_state.config['feeds']:
-                    st.session_state.config['feeds'].append(yf)
-            save_config(st.session_state.config)
-            st.rerun()
-            
-    with p2: 
-        if st.button("Add Top Tech News Feeds", use_container_width=True):
-            tech_feeds = [
+            added = 0
+            for f in feeds:
+                if f not in st.session_state.config['feeds']:
+                    st.session_state.config['feeds'].append(f)
+                    added += 1
+            if added > 0:
+                save_config(st.session_state.config)
+                st.success(f"Added {added} AI feeds!")
+                st.rerun()
+    with p2:
+        if st.button("Top Tech Feeds", use_container_width=True):
+            feeds = [
                 "https://news.ycombinator.com/rss",
                 "https://www.theverge.com/rss/index.xml",
                 "https://feeds.arstechnica.com/arstechnica/index",
                 "https://www.wired.com/feed/rss",
                 "https://techcrunch.com/feed/"
             ]
-            for mf in tech_feeds:
-                if mf not in st.session_state.config['feeds']: st.session_state.config['feeds'].append(mf)
-            save_config(st.session_state.config)
-            st.rerun()
+            added = 0
+            for f in feeds:
+                if f not in st.session_state.config['feeds']:
+                    st.session_state.config['feeds'].append(f)
+                    added += 1
+            if added > 0:
+                save_config(st.session_state.config)
+                st.success(f"Added {added} Tech feeds!")
+                st.rerun()
+    with p3:
+        if st.button("YouTube Tech Channels", use_container_width=True):
+            feeds = [
+                "https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw",
+                "https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA",
+                "https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA"
+            ]
+            added = 0
+            for f in feeds:
+                if f not in st.session_state.config['feeds']:
+                    st.session_state.config['feeds'].append(f)
+                    added += 1
+            if added > 0:
+                save_config(st.session_state.config)
+                st.success(f"Added {added} YT feeds!")
+                st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-            
-    # --- 5. CURRENT FEEDS LIST ---
-    st.markdown('<div class="v-card"><span class="card-title">ALL RSS FEEDS</span>', unsafe_allow_html=True)
-    if not st.session_state.config['feeds']:
-        st.markdown('<span style="color:#6b7280; font-size:0.85rem;">[No feeds currently configured]</span>', unsafe_allow_html=True)
 
+    st.markdown('<div class="v-card"><span class="card-title">ALL FEEDS (toggle + weight)</span>', unsafe_allow_html=True)
+    
     feeds_enabled = st.session_state.config.get('feeds_enabled', {})
     feeds_weight = st.session_state.config.get('feeds_weight', {})
-
+    
     changed = False
-    for i, f in enumerate(st.session_state.config['feeds']):
-        col_toggle, col_url, col_weight, col_del = st.columns([1, 4, 2, 1])
+    for i, f in enumerate(st.session_state.config.get('feeds', [])):
+        c_toggle, c_url, c_badge, c_weight, c_del = st.columns([1, 4, 1, 2, 1])
         
-        with col_toggle:
-            enabled = st.toggle("", value=feeds_enabled.get(f, True), key=f"toggle_{i}_{f}", label_visibility="collapsed")
-            if feeds_enabled.get(f, True) != enabled:
-                feeds_enabled[f] = enabled
+        with c_toggle:
+            is_on = feeds_enabled.get(f, True)
+            new_on = st.toggle("", value=is_on, key=f"toggle_f_{i}", label_visibility="collapsed")
+            if new_on != is_on:
+                feeds_enabled[f] = new_on
                 changed = True
-        
-        with col_url:
-            color = "#9ca3af" if feeds_enabled.get(f, True) else "#4b5563"
-            st.markdown(f'<div class="v-list-item" style="border:none; font-size:0.8rem; color:{color}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{f}">{f}</div>', unsafe_allow_html=True)
-        
-        with col_weight:
-            w = st.slider("", 0.1, 2.0, float(feeds_weight.get(f, 1.0)), 0.1, key=f"weight_{i}_{f}", label_visibility="collapsed")
-            if feeds_weight.get(f, 1.0) != w:
-                feeds_weight[f] = w
+                
+        with c_url:
+            st.markdown(f'<div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-top:8px;">{f}</div>', unsafe_allow_html=True)
+            
+        with c_badge:
+            badge = "YT" if "youtube.com" in f else "RSS"
+            color = "#ff0000" if badge == "YT" else "#3b82f6"
+            st.markdown(f'<span style="background:{color}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">{badge}</span>', unsafe_allow_html=True)
+            
+        with c_weight:
+            current_w = float(feeds_weight.get(f, 1.0))
+            new_w = st.slider("", 0.1, 2.0, current_w, 0.1, key=f"weight_f_{i}", label_visibility="collapsed")
+            if new_w != current_w:
+                feeds_weight[f] = new_w
                 changed = True
-        
-        with col_del:
-            if st.button("✕", key=f"delete_feed_{i}_{f}"):
+                
+        with c_del:
+            if st.button("✕", key=f"del_feed_{i}"):
                 st.session_state.config['feeds'].pop(i)
                 feeds_enabled.pop(f, None)
                 feeds_weight.pop(f, None)
                 changed = True
-
+                
     if changed:
         st.session_state.config['feeds_enabled'] = feeds_enabled
         st.session_state.config['feeds_weight'] = feeds_weight
         save_config(st.session_state.config)
         st.rerun()
-
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.07);'>", unsafe_allow_html=True)
-    
-    # --- 6. ADD FEED MANUALLY ---
-    st.markdown('<div style="font-size:0.85rem; color:#9ca3af; margin-bottom:0.5rem;">Add Feed Manually:</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns([4, 1])
-    with c1:
-        new_feed = st.text_input("Add New Feed URL", placeholder="https://...", label_visibility="collapsed")
-    with c2:
-        if st.button("Add Feed", type="primary", use_container_width=True):
-            if new_feed and new_feed.strip() and new_feed not in st.session_state.config['feeds']:
-                st.session_state.config['feeds'].append(new_feed.strip())
-                save_config(st.session_state.config)
-                st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    # --- 7. COLLECTION LIMITS ---
-    st.markdown('<div class="v-card"><span class="card-title">COLLECTION LIMITS</span>', unsafe_allow_html=True)
-    
-    new_items_per_feed = st.slider("Max items parsed per feed", 1, 100, config.get("items_per_feed", 50))
-    new_max_synthesis = st.slider("Max articles passed to LLM", 5, 100, config.get("max_articles_to_llm", 20))
-    
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.07);'>", unsafe_allow_html=True)
-    
-    if st.button("Save Data Sources Settings", type="primary", use_container_width=True, key="save_feeds"):
-        st.session_state.config['items_per_feed'] = new_items_per_feed
-        st.session_state.config['max_articles_to_llm'] = new_max_synthesis
-        save_config(st.session_state.config)
-        st.success("Data sources settings saved!")
 
 elif "Advanced" in page:
     st.markdown('<div class="v-card"><span class="card-title">Advanced Settings</span>', unsafe_allow_html=True)
@@ -1346,17 +1317,71 @@ elif "Advanced" in page:
         with c3:
             if details['available']:
                 if not is_active:
-                    if st.button("Select", key=f"sel_{prov}"):
+                    if st.button("Select", key=f"sel_{prov}", use_container_width=True):
                         st.session_state.config['provider'] = prov
                         st.session_state.config['model'] = get_best_model(prov)
                         save_config(st.session_state.config)
                         st.rerun()
-            else:
-                with st.expander("Get key"):
-                    st.write(f"To use {prov}, add {details['key_name']} to your .env file and restart.")
+                else:
+                    st.markdown('<span style="color:#10b981; font-size:1.2rem;">●</span>', unsafe_allow_html=True)
+            elif prov != 'ollama':
+                if st.button("Add key", key=f"add_key_btn_{prov}", use_container_width=True):
+                    st.session_state[f"show_input_{prov}"] = True
+                
+                if st.session_state.get(f"show_input_{prov}"):
+                    new_key = st.text_input(f"Paste {details['key_name']}", type="password", key=f"input_{prov}")
+                    if st.button("Save key", key=f"save_btn_{prov}"):
+                        if new_key:
+                            save_api_key_to_env(details['key_name'], new_key)
+                            st.session_state[f"show_input_{prov}"] = False
+                            st.success(f"Key for {prov} saved!")
+                            time.sleep(1)
+                            st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
     
+    st.markdown('<div class="v-card" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);"><span class="card-title">Ollama (Local)</span>', unsafe_allow_html=True)
+    
+    # Status Check
+    is_running = False
+    try:
+        r = requests.get("http://localhost:11434", timeout=2)
+        is_running = (r.status_code == 200)
+    except:
+        pass
+    
+    col_st, col_link = st.columns([1, 1])
+    with col_st:
+        if is_running:
+            st.markdown('Status: <span class="v-badge badge-green">RUNNING</span>', unsafe_allow_html=True)
+        else:
+            st.markdown('Status: <span class="v-badge badge-red" style="background:#ef4444; color:white;">NOT RUNNING</span>', unsafe_allow_html=True)
+    with col_link:
+        st.markdown('<a href="https://ollama.com/download" target="_blank" style="text-decoration:none; color:#60a5fa; font-size:0.9rem;">Download Ollama ↗</a>', unsafe_allow_html=True)
+    
+    ollama_model = st.text_input("Ollama Model Name", value=config.get('ollama_model', 'llama3'), key="ollama_model_input")
+    if ollama_model != config.get('ollama_model'):
+        config['ollama_model'] = ollama_model
+        save_config(config)
+        st.rerun()
+        
+    if st.button("🔌 Test connection", use_container_width=True):
+        if not is_running:
+            st.error("Ollama is not running. Please start it first.")
+        else:
+            with st.spinner(f"Testing {ollama_model}..."):
+                try:
+                    resp = requests.post("http://localhost:11434/api/generate", 
+                                       json={"model": ollama_model, "prompt": "hi", "stream": False},
+                                       timeout=10)
+                    if resp.status_code == 200:
+                        st.success(f"Successfully connected to {ollama_model}!")
+                    else:
+                        st.error(f"Error from Ollama: {resp.text}")
+                except Exception as e:
+                    st.error(f"Connection failed: {e}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
     # 4. 🗄️ STORAGE PATHS
     st.markdown('<span class="card-title mt-4">Storage Paths</span>', unsafe_allow_html=True)
     config['sqlite_path'] = st.text_input("SQLite Database Path", value=config.get("sqlite_path", "watcher.db"))

@@ -3,10 +3,21 @@ from functools import lru_cache
 class SmartFilter:
     
     def __init__(self, topics, threshold=0.30, config=None):
-        self.topics = topics
-        self.threshold = threshold
         self.config = config or {}
+        self.threshold = threshold
         self.model = self._load_model()
+        # Support both old format (string) and new format (dict with name+description)
+        self.topics = []
+        self.topic_texts = {}
+        for t in topics:
+            if isinstance(t, dict):
+                name = t['name']
+                desc = t.get('description', name)
+                self.topics.append(name)
+                self.topic_texts[name] = desc
+            else:
+                self.topics.append(t)
+                self.topic_texts[t] = t
     
     @staticmethod
     @lru_cache(maxsize=1)
@@ -43,16 +54,21 @@ class SmartFilter:
     
     def semantic_score(self, article, topic):
         try:
+            # Find the rich description for this topic
+            topic_text = topic
+            if topic in self.topic_texts:
+                topic_text = self.topic_texts[topic]
+            
             text = self.get_article_text(article)
             if not text:
                 return 0.0
             import numpy as np
-            art_emb   = self.model.encode([text])
-            topic_emb = self.model.encode([topic])
+            art_emb = self.model.encode([text])
+            topic_emb = self.model.encode([topic_text])
             similarity = float(np.dot(
                 art_emb[0], topic_emb[0]
             ) / (
-                np.linalg.norm(art_emb[0]) * 
+                np.linalg.norm(art_emb[0]) *
                 np.linalg.norm(topic_emb[0])
             ))
             return max(0.0, similarity)

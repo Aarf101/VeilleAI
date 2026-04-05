@@ -12,11 +12,21 @@ def load_config(path=None):
     if not p.exists():
         return {}
     with p.open("r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+        config = yaml.safe_load(f) or {}
+        # After loading, normalize topics
+        if 'topics' in config:
+            normalized = []
+            for t in config['topics']:
+                if isinstance(t, dict):
+                    normalized.append(t)
+                else:
+                    normalized.append({'name': t, 'description': t})
+            config['topics'] = normalized
+        
         print(f"[config] Loaded: {p}")
-        print(f"[config] Feeds: {len(data.get('feeds',[]))}")
-        print(f"[config] Topics: {data.get('topics',[])}")
-        return data
+        print(f"[config] Feeds: {len(config.get('feeds',[]))}")
+        print(f"[config] Topics: {config.get('topics',[])}")
+        return config
 
 
 def sample_default() -> dict:

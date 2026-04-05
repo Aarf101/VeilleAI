@@ -51,14 +51,17 @@ def call_llm(prompt, config):
     model    = get_config_value(config, 'model', 'api_model', default='')
     
     if provider == 'gemini':
-        import google.generativeai as genai
         import os
+        import importlib
+        genai = importlib.import_module('google.genai')
         api_key = os.environ.get('GEMINI_API_KEY', '')
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in .env")
-        genai.configure(api_key=api_key)
-        m    = genai.GenerativeModel(model or 'gemini-2.0-flash')
-        resp = m.generate_content(prompt)
+        client = genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model=model or 'gemini-2.0-flash',
+            contents=prompt
+        )
         return resp.text
     
     elif provider == 'groq':
@@ -226,8 +229,9 @@ def generate_report(filtered_by_topic, config, llm_client):
     total_arts = len(all_articles)
     all_sources = len(set(a.get('source', '') for a in all_articles if a.get('source')))
     
+    topic_names = [t['name'] if isinstance(t, dict) else t for t in topics]
     exec_prompt = f"""Tu es rédacteur en chef. Date: {date}.
-Nous avons {total_arts} articles sur les sujets: {', '.join(topics)}.
+Nous avons {total_arts} articles sur les sujets: {', '.join(topic_names)}.
 Génère UNIQUEMENT un court résumé exécutif (2-3 phrases) de l'actualité globale, sans titres."""
     try:
         exec_summary = call_llm(exec_prompt, config)
@@ -248,7 +252,7 @@ Génère UNIQUEMENT un court résumé exécutif (2-3 phrases) de l'actualité gl
 ## Résumé Exécutif
 {exec_summary}
 
-Topics: {', '.join(topics)} | Articles: {total_arts} | Sources: {all_sources}
+Topics: {', '.join(topic_names)} | Articles: {total_arts} | Sources: {all_sources}
 
 ---
 
@@ -338,3 +342,5 @@ def get_friendly_error(error, provider):
             'solution':'Réessaie dans quelques minutes.',
             'action':  'retry'
         }
+
+
