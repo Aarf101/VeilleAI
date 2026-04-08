@@ -1,0 +1,18 @@
+[Unit]
+Description=AgenticNotes Full Pipeline Scheduler (Multi-Agent Workflow)
+After=network.target
+
+[Service]
+Type=simple
+User=aarf101
+WorkingDirectory=/home/aarf101/development/AgenticNotes-aarf102/AgenticNotes-aarf102am
+Environment="PATH=/home/aarf101/development/AgenticNotes-aarf102/AgenticNotes-aarf102am/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/aarf101/development/AgenticNotes-aarf102/AgenticNotes-aarf102am/.env
+ExecStart=/home/aarf101/development/AgenticNotes-aarf102/AgenticNotes-aarf102am/.venv/bin/python3 -c "from watcher.scheduler import start_scheduler; start_scheduler()"
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/aarf101/development/AgenticNotes-aarf102/AgenticNotes-aarf102am/scheduler.log
+StandardError=append:/home/aarf101/development/AgenticNotes-aarf102/AgenticNotes-aarf102am/scheduler.log
+
+[Install]
+WantedBy=multi-user.target

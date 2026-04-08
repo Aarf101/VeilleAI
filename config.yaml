@@ -1,0 +1,126 @@
+chroma_path: ./chroma_db
+enable_autonomous_search: false
+enable_trending_weighting: true
+enable_youtube_transcripts: false
+feeds:
+- https://www.artificialintelligence-news.com/feed/
+- https://huggingface.co/blog/feed.xml
+- https://feeds.feedburner.com/TheHackersNews
+- https://www.bleepingcomputer.com/feed/
+- https://cointelegraph.com/rss
+- https://coindesk.com/arc/outboundfeeds/rss/
+- https://feeds.feedburner.com/venturebeat/SZY
+- https://news.google.com/rss/search?q=Fintech&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Cryptocurrency&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Stock+Market&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Venture+Capital&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Startup+Funding&hl=fr&gl=FR&ceid=FR:fr
+- https://arxiv.org/rss/cs.AI
+- https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:f
+- https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Encryption&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Privacy&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Data+Protection&hl=fr&gl=FR&ceid=FR:fr
+- https://news.google.com/rss/search?q=Cybersecurity&hl=fr&gl=FR&ceid=FR:fr
+- https://krebsonsecurity.com/feed/
+- https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw
+- https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA
+- https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA
+feeds_enabled:
+  https://arxiv.org/rss/cs.AI: true
+  https://coindesk.com/arc/outboundfeeds/rss/: false
+  https://cointelegraph.com/rss: true
+  https://feeds.feedburner.com/TheHackersNews: false
+  https://feeds.feedburner.com/venturebeat/SZY: false
+  https://huggingface.co/blog/feed.xml: false
+  https://krebsonsecurity.com/feed/: true
+  https://news.google.com/rss/search?q=Cryptocurrency&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Cybersecurity&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Data+Protection&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Encryption&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Fintech&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Privacy&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Startup+Funding&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Stock+Market&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:f: false
+  https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:fr: false
+  https://news.google.com/rss/search?q=Venture+Capital&hl=fr&gl=FR&ceid=FR:fr: false
+  https://www.artificialintelligence-news.com/feed/: true
+  https://www.bleepingcomputer.com/feed/: true
+  https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: false
+  https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA: false
+  https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw: false
+feeds_weight:
+  https://arxiv.org/rss/cs.AI: 1.6
+  https://coindesk.com/arc/outboundfeeds/rss/: 1.9
+  https://cointelegraph.com/rss: 2.0
+  https://feeds.feedburner.com/TheHackersNews: 0.9
+  https://feeds.feedburner.com/venturebeat/SZY: 1.7
+  https://krebsonsecurity.com/feed/: 0.7
+  https://news.google.com/rss/search?q=Cryptocurrency&hl=fr&gl=FR&ceid=FR:fr: 0.4
+  https://news.google.com/rss/search?q=Cybersecurity&hl=fr&gl=FR&ceid=FR:fr: 1.2
+  https://news.google.com/rss/search?q=Data+Protection&hl=fr&gl=FR&ceid=FR:fr: 0.7
+  https://news.google.com/rss/search?q=Encryption&hl=fr&gl=FR&ceid=FR:fr: 0.6
+  https://news.google.com/rss/search?q=Fintech&hl=fr&gl=FR&ceid=FR:fr: 0.2
+  https://news.google.com/rss/search?q=Privacy&hl=fr&gl=FR&ceid=FR:fr: 1.4
+  https://news.google.com/rss/search?q=Startup+Funding&hl=fr&gl=FR&ceid=FR:fr: 0.4
+  https://news.google.com/rss/search?q=Stock+Market&hl=fr&gl=FR&ceid=FR:fr: 1.6
+  https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:f: 0.4
+  https://news.google.com/rss/search?q=Threat+Detection&hl=fr&gl=FR&ceid=FR:fr: 1.6
+  https://news.google.com/rss/search?q=Venture+Capital&hl=fr&gl=FR&ceid=FR:fr: 1.7
+  https://www.bleepingcomputer.com/feed/: 0.6
+  https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: 0.4
+  https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA: 1.1
+  https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw: 0.6
+items_per_feed: 30
+llm_enabled: true
+max_articles_to_llm: 56
+model: llama-3.3-70b-versatile
+news_language: 🇫🇷 Français
+ollama_model: llama3
+provider: groq
+recency_boost: true
+relevance_threshold: 0.4
+schedule_fixed_hours: []
+schedule_interval_minutes: 420
+schedule_mode: fixed_hour
+schedule_specific_datetime: 2026-03-18 01:00
+scheduler_frequency: 360
+sqlite_path: watcher.db
+topic_blacklist:
+- smartphone
+- galaxy
+- iphone
+- samsung display
+- electric vehicle
+- football
+- fashion
+- recipe
+topics:
+- description: hacking malware ransomware attack vulnerability phishing threat cyber
+    incident breach botnet spyware trojan
+  name: Cybersecurity
+- description: personal data GDPR data breach compliance database security regulation
+    data leak sensitive information
+  name: Data Protection
+- description: user privacy surveillance GDPR anonymity confidentiality data rights
+    personal information tracking cookies
+  name: Privacy
+- description: encryption cryptography quantum post-quantum cipher SSL TLS key management
+    certificate PKI
+  name: Encryption
+- description: threat detection SIEM XDR intrusion detection anomaly security monitoring
+    SOC alert incident response
+  name: Threat Detection
+- description: artificial intelligence machine learning deep learning neural networks
+    computer vision natural language processing
+  name: Artificial Intelligence
+- description: generative ai large language models diffusion models image generation
+    text-to-speech transformer architecture
+  name: Generative AI
+- description: mobile device smartphone cellular telephone wireless communication
+    handheld gadget android ios operating system mobile phone battery life screen
+    size storage capacity processor speed camera resolution charging port headphone
+    jack sim card microsd card touchscreen display fingerprint sensor facial recognition
+    wireless charging near field communication bluetooth connectivity
+  name: phone

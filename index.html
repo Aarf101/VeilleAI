@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeilleAI - Intelligence Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">Veille<span>AI</span></div>
+                <div class="subtitle">INTELLIGENCE MONITOR</div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-page="dashboard">
+                        <span class="nav-icon">📊</span> Dashboard
+                    </li>
+                    <li class="nav-item" data-page="run-pipeline">
+                        <span class="nav-icon">🚀</span> Run Pipeline
+                    </li>
+                    <li class="nav-item" data-page="scheduler">
+                        <span class="nav-icon">📅</span> Scheduler
+                    </li>
+                    <li class="nav-item" data-page="topics">
+                        <span class="nav-icon">🏷️</span> Topics
+                    </li>
+                    <li class="nav-item" data-page="data-sources">
+                        <span class="nav-icon">🌐</span> Data Sources
+                    </li>
+                    <li class="nav-item" data-page="advanced">
+                        <span class="nav-icon">⚙️</span> Advanced
+                    </li>
+                    <li class="nav-item" data-page="monitoring">
+                        <span class="nav-icon">📈</span> Monitoring
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-item">Database <span class="dot green">●</span></div>
+                    <div class="status-item">Scheduler <span class="dot green">●</span></div>
+                    <div class="status-item">API Keys <span class="dot green">●</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 class="wordmark">VeilleAI</h1>
+                </div>
+                <div class="header-right">
+                    <div class="badge badge-blue">GROQ · model</div>
+                    <div class="badge badge-blue" id="header-article-count">0 articles</div>
+                    <div class="badge badge-blue" id="header-feed-count">0 feeds</div>
+                </div>
+            </header>
+
+            <div id="page-content" class="page-container">
+                <!-- Dashboard content will be injected here -->
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
