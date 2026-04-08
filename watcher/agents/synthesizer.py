@@ -97,9 +97,9 @@ def call_llm(prompt, config):
 
 import os
 
-def generate_topic_section(topic, articles, config):
+def generate_topic_section(topic, articles, config, index):
     if not articles:
-        return f"VEILLE TECHNOLOGIQUE : {topic}\nAucun article trouvé.\n\n---\n\n"
+        return f"{index}. Technology Watch: {topic}\nNo articles found.\n"
     
     display_articles = [a for a in articles if a.get('relevance_score', 0) >= 0.60][:3]
     if not display_articles:
@@ -108,7 +108,7 @@ def generate_topic_section(topic, articles, config):
     articles_for_llm = ""
     for i, art in enumerate(display_articles, 1):
         title   = (art.get('title','') or '')[:150]
-        source  = art.get('source','') or 'Source inconnue'
+        source  = art.get('source','') or 'Unknown source'
         summary = clean_text(
             art.get('summary','') or 
             art.get('description','') or 
@@ -117,14 +117,14 @@ def generate_topic_section(topic, articles, config):
         date_art = (art.get('published','') or '')[:10]
         articles_for_llm += f"[{i}] {title} ({source}, {date_art}): {summary}\n"
     
-    prompt = f"""Tu es un analyste expert en veille technologique sur le thème "{topic}".
-Voici les annonces majeures de la semaine :
+    prompt = f"""You are an expert analyst in technology watch, focusing on the topic "{topic}".
+Here are the major announcements of the week:
 {articles_for_llm}
 
-Rédige EXACTEMENT 3 paragraphes séparés par "|||". Pas de titres, pas d'intro, pas de puces, juste les 3 textes bruts séparés par "|||".
-Paragraphe 1 : Résumé exécutif (synthèse des annonces, 2-3 phrases).
-Paragraphe 2 : Rappel du contexte récent du domaine (1-2 phrases).
-Paragraphe 3 : Analyse et implications (conséquences et tendances de fond, 2-3 phrases)."""
+Write EXACTLY 3 paragraphs separated by "|||". No titles, no intro, no bullet points, just the 3 raw texts separated by "|||".
+Paragraph 1: Executive summary (synthesis of announcements, 2-3 sentences).
+Paragraph 2: Recent context reminder for the field (1-2 sentences).
+Paragraph 3: Analysis and implications (consequences and deep trends, 2-3 sentences)."""
     
     try:
         import time
@@ -134,53 +134,43 @@ Paragraphe 3 : Analyse et implications (conséquences et tendances de fond, 2-3 
         
         parts = llm_content.split('|||')
         exec_sum = parts[0].strip() if len(parts) > 0 else llm_content
-        context_sum = parts[1].strip() if len(parts) > 1 else "Contexte généré indisponible."
-        analysis_sum = parts[2].strip() if len(parts) > 2 else "Analyse générée indisponible."
+        context_sum = parts[1].strip() if len(parts) > 1 else "Context generation unavailable."
+        analysis_sum = parts[2].strip() if len(parts) > 2 else "Analysis generation unavailable."
     except Exception as e:
-        exec_sum = f"Erreur LLM lors de la génération du résumé: {e}"
-        context_sum = "A/N"
-        analysis_sum = "A/N"
+        exec_sum = f"LLM error during summary generation: {e}"
+        context_sum = "N/A"
+        analysis_sum = "N/A"
         
-    nouveautes = "NOUVEAUTÉS DE LA PÉRIODE\n"
-    sources_text = "SOURCES ET RÉFÉRENCES\n"
+    recent_devs = f"{index}.3. Recent Developments\n"
     
     for i, art in enumerate(display_articles, 1):
         title = (art.get('title','') or '')[:150]
-        source = art.get('source','') or 'Source inconnue'
+        source = art.get('source','') or 'Unknown source'
         date_art = (art.get('published','') or '')[:10]
         summary = clean_text(
             art.get('summary','') or 
             art.get('description','') or 
             art.get('content','') or ''
         )[:250]
-        
-        nouveautes += f"{i}. {title}\n{summary}...\nSource : {source}, {date_art}\n\n"
-        sources_text += f"• {source} - \"{title}\" - {date_art}\n"
+        recent_devs += f"{i}. {title}\n{summary}... ({source}, {date_art})\n\n"
     
-    date_header = datetime.now().strftime("Semaine du %d %B %Y")
-    
-    return f"""VEILLE TECHNOLOGIQUE : {topic}
-Période : {date_header}
+    return f"""{index}. Technology Watch: {topic}
 
-RÉSUMÉ EXÉCUTIF
+{index}.1. Executive Summary
 {exec_sum}
 
-RAPPEL DU CONTEXTE
+{index}.2. Context
 {context_sum}
 
-{nouveautes}
-ANALYSE ET IMPLICATIONS
+{recent_devs}{index}.4. Analysis & Implications
 {analysis_sum}
-
-{sources_text}
----
 """
 
 def generate_trends(filtered_by_topic, articles):
     dominant = max(
         filtered_by_topic.items(),
         key=lambda x: len(x[1]),
-        default=('Aucun', [])
+        default=('None', [])
     )[0]
     
     all_titles = " ".join(
@@ -188,22 +178,23 @@ def generate_trends(filtered_by_topic, articles):
         filtered_by_topic.values() for a in arts
     ).lower()
     
-    alert = "Aucune alerte majeure"
+    alert = "No major alerts"
     if 'hack' in all_titles or 'breach' in all_titles:
-        alert = "Incident de sécurité détecté"
+        alert = "Security incident detected"
     elif 'crash' in all_titles or 'chute' in all_titles:
-        alert = "Baisse de marché détectée"
+        alert = "Market drop detected"
     elif 'launch' in all_titles or 'lancement' in all_titles:
-        alert = "Nouveau lancement important"
+        alert = "Major new launch detected"
     
-    return f"""## Tendances de la semaine
-- **Topic dominant:** {dominant}
-- **Alerte prioritaire:** {alert}
-- **Articles totaux:** {sum(len(v) for v in filtered_by_topic.values())}
+    return f"""2. Trends of the Week
+* **Dominant Topic:** {dominant}
+* **Priority Alert:** {alert}
+* **Total Articles:** {sum(len(v) for v in filtered_by_topic.values())}
 """
 
 
 def generate_report(filtered_by_topic, config, llm_client):
+    from datetime import datetime
     date = datetime.now().strftime("%B %d, %Y")
     topics = config.get('topics', [])
     
@@ -220,17 +211,15 @@ def generate_report(filtered_by_topic, config, llm_client):
     report_sections = []
     all_articles = []
     
-    for topic in topics:
+    for i, topic in enumerate(topics, start=3):
         topic_name = topic['name'] if isinstance(topic, dict) else topic
         articles = filtered_by_topic.get(topic_name, [])
         max_per_topic = 5 # Allowing up to 5 best articles per topic to give the AI more context
         
-        # Fixed scoping bug: display_articles doesn't exist here yet
         top_articles = articles[:max_per_topic]
-        
         all_articles.extend(top_articles)
         
-        section_content = generate_topic_section(topic_name, top_articles, config)
+        section_content = generate_topic_section(topic_name, top_articles, config, i)
         report_sections.append(section_content)
             
     # Executive Summary Generation
@@ -238,40 +227,63 @@ def generate_report(filtered_by_topic, config, llm_client):
     all_sources = len(set(a.get('source', '') for a in all_articles if a.get('source')))
     
     topic_names = [t['name'] if isinstance(t, dict) else t for t in topics]
-    exec_prompt = f"""Tu es rédacteur en chef. Date: {date}.
-Nous avons {total_arts} articles sur les sujets: {', '.join(topic_names)}.
-Génère UNIQUEMENT un court résumé exécutif (2-3 phrases) de l'actualité globale, sans titres."""
+    exec_prompt = f"""You are the Editor in Chief. Date: {date}.
+We have {total_arts} articles on the following topics: {', '.join(topic_names)}.
+Generate ONLY a short executive summary (2-3 sentences) of the global news, without any titles or bullet points."""
     try:
         exec_summary = call_llm(exec_prompt, config)
+        import re
         exec_summary = re.sub(r'<think>.*?</think>', '', exec_summary, flags=re.IGNORECASE | re.DOTALL).strip()
     except:
-        exec_summary = "Période de veille complétée avec succès sur l'ensemble des sujets configurés."
+        exec_summary = "Intelligence gathering completed successfully on all configured topics."
 
     # Trends Generation
     trends = generate_trends(filtered_by_topic, all_articles)
+    
+    # Sources section
+    sources_index = len(topics) + 3
+    sources_text = f"{sources_index}. Sources & References\n"
+    added_urls = set()
+    for art in all_articles:
+        title = (art.get('title','') or '')[:150]
+        source = art.get('source','') or 'Unknown source'
+        date_art = (art.get('published','') or '')[:10]
+        url = get_real_url(art)
+        
+        if url and url not in added_urls:
+            sources_text += f"* {source} - [{title}]({url}) - {date_art}\n"
+            added_urls.add(url)
+        elif not url:
+            # If no URL, just print the text
+            url_str = str(art.get('url','') or art.get('link',''))
+            if url_str not in added_urls:
+                sources_text += f"* {source} - \"{title}\" - {date_art}\n"
+                added_urls.add(url_str)
 
     separator = "\n---\n\n"
     
-    full_report = f"""# Rapport Intelligence — {date}
-**Généré par VeilleAI · {provider} · {model}**
+    full_report = f"""# Intelligence Report — {date}
+**Generated by VeilleAI · {provider} · {model}**
 
 ---
 
-## Résumé Exécutif
+1. Executive Summary
 {exec_summary}
 
 Topics: {', '.join(topic_names)} | Articles: {total_arts} | Sources: {all_sources}
 
 ---
 
+{trends}
+---
+
 {separator.join(report_sections)}
 
 ---
 
-{trends}
-
+{sources_text}
 ---
-*Rapport généré le {date} par VeilleAI*
+*Report generated on {date} by VeilleAI*
 """
     return full_report
 
