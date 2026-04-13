@@ -108,6 +108,12 @@ def generate_topic_section(topic, articles, config, index):
     articles_for_llm = ""
     for i, art in enumerate(display_articles, 1):
         title   = (art.get('title','') or '')[:150]
+        
+        # Add badge to LLM prompt so it realizes the article is hot/trending
+        trending = art.get('trending_algorithm')
+        if trending:
+            title = f"[HOT/FRESH BOOST: {trending}] {title}"
+            
         source  = art.get('source','') or 'Unknown source'
         summary = clean_text(
             art.get('summary','') or 
@@ -250,14 +256,17 @@ Generate ONLY a short executive summary (2-3 sentences) of the global news, with
         date_art = (art.get('published','') or '')[:10]
         url = get_real_url(art)
         
+        trending = art.get('trending_algorithm', '')
+        trend_badge = f" **[🔥 {trending}]**" if trending else ""
+        
         if url and url not in added_urls:
-            sources_text += f"* {source} - [{title}]({url}) - {date_art}\n"
+            sources_text += f"* {source} - [{title}]({url}) - {date_art}{trend_badge}\n"
             added_urls.add(url)
         elif not url:
             # If no URL, just print the text
             url_str = str(art.get('url','') or art.get('link',''))
             if url_str not in added_urls:
-                sources_text += f"* {source} - \"{title}\" - {date_art}\n"
+                sources_text += f"* {source} - \"{title}\" - {date_art}{trend_badge}\n"
                 added_urls.add(url_str)
 
     separator = "\n---\n\n"

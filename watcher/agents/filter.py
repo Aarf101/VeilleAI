@@ -229,6 +229,7 @@ class SmartFilter:
                 # Tag it for debug/UI transparency
                 if hotness_bonus > 0 or recency_bonus > 0:
                     art['trending_algorithm'] = f"+{hotness_bonus:.1f} Hot, +{recency_bonus:.1f} Fresh"
+                    print(f"      [🔥 TRENDING] '{art.get('title', '')[:40]}...' boosted by +{hotness_bonus:.1f} Hot, +{recency_bonus:.1f} Fresh")
                     
                 art['relevance_score'] = new_score
 
