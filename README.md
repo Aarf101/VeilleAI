@@ -1,4 +1,4 @@
-# AgenticNotes (VeilleAI)
+# VeilleAI (formerly known as AgenticNotes)
 
 AgenticNotes is a fully autonomous, AI-powered intelligence gathering and tech-watch (*veille technologique*) pipeline. It acts as your personal research team—scouring the internet, filtering the noise, and synthesizing high-quality, executive-ready Markdown reports based on your specific topics of interest.
 
