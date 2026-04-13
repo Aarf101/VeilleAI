@@ -16,11 +16,22 @@ AgenticNotes is a fully autonomous, AI-powered intelligence gathering and tech-w
 
 ### 1. Installation
 Clone the repository and install the dependencies:
+
+**Mac/Linux:**
 ```bash
 git clone https://github.com/Aarf101/AgenticNotes.git
 cd AgenticNotes
 python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Windows:**
+```powershell
+git clone https://github.com/Aarf101/AgenticNotes.git
+cd AgenticNotes
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
