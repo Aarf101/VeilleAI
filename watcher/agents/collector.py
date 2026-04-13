@@ -161,7 +161,7 @@ class CollectorAgent:
         all_rss_entries: List[Dict] = []
         with ThreadPoolExecutor(max_workers=min(15, len(feeds) or 1)) as executor:
             feeds_enabled = config.get('feeds_enabled', {})
-            active_feeds = [f for f in feeds if feeds_enabled.get(f, True)]
+            active_feeds = [f for f in feeds if feeds_enabled.get(f, True)] if config.get("enable_rss_feeds", True) else []
             futures = [executor.submit(_fetch_one_rss, f) for f in active_feeds]
             for future in as_completed(futures):
                 all_rss_entries.extend(future.result())
@@ -170,26 +170,30 @@ class CollectorAgent:
             _process_entry(e)
 
         # Collect APIs
-        for a in apis:
-            if isinstance(a, dict):
-                url = a.get("url")
-                items_path = a.get("items_path")
-            else:
-                url = a
-                items_path = None
-            if not url:
-                continue
-            try:
-                api_items = fetch_json_api(url, items_path=items_path, max_items=config.get("max_items_per_feed", 50))
-            except Exception as e:
-                logger.error(f"Failed to fetch API {url}: {e}")
-                api_items = []
+        if config.get("enable_rss_feeds", True):
+            for a in apis:
+                if isinstance(a, dict):
+                    url = a.get("url")
+                    items_path = a.get("items_path")
+                else:
+                    url = a
+                    items_path = None
+                if not url:
+                    continue
+                try:
+                    api_items = fetch_json_api(url, items_path=items_path, max_items=config.get("max_items_per_feed", 50))
+                except Exception as e:
+                    logger.error(f"Failed to fetch API {url}: {e}")
+                    api_items = []
 
-            for e in api_items:
-                _process_entry(e)
+                for e in api_items:
+                    _process_entry(e)
 
         # Autonomous Web Search Integration (DuckDuckGo News)
-        if config.get("enable_autonomous_search", False):
+        do_news = config.get("enable_autonomous_search", False)
+        do_youtube = config.get("enable_youtube_transcripts", False)
+        
+        if do_news or do_youtube:
             logger.info("Autonomous Web Search enabled: Searching topics...")
             try:
                 from ddgs import DDGS
@@ -198,8 +202,7 @@ class CollectorAgent:
                     for t in topics:
                         t_name = t.get('name', t) if isinstance(t, dict) else t
                         
-                        if config.get("enable_youtube_transcripts", False):
-                            # ONLY search for YouTube videos
+                        if do_youtube:
                             logger.info(f"Searching YouTube videos for: {t_name}")
                             try:
                                 video_results = list(ddgs.videos(f"{t_name} news recent", max_results=5))
@@ -217,8 +220,8 @@ class CollectorAgent:
                                         _process_entry(video_entry)
                             except Exception as ve:
                                 logger.warning(f"DuckDuckGo video search failed for {t_name}: {ve}")
-                        else:
-                            # ONLY search for news articles
+                                
+                        if do_news:
                             search_query = f"{t_name} news"
                             logger.info(f"Searching web for: {search_query}")
                             try:

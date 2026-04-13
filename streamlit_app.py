@@ -1239,38 +1239,22 @@ elif "Data Sources" in page:
     st.markdown('<div class="v-card"><span class="card-title">COLLECTION STRATEGY</span>', unsafe_allow_html=True)
     st.markdown('<div style="font-size:0.85rem; color:#9ca3af; margin-bottom:1rem;">Select how the AI should gather data across your configured topics.</div>', unsafe_allow_html=True)
     
-    # Map current state to radio options
+    # Independent toggles for data sources
+    is_rss = st.session_state.config.get("enable_rss_feeds", True)
     is_auto = st.session_state.config.get("enable_autonomous_search", False)
     is_yt = st.session_state.config.get("enable_youtube_transcripts", False)
     
-    if is_auto and is_yt:
-        curr_strategy = "Autonomous YouTube Scraping"
-    elif is_auto and not is_yt:
-        curr_strategy = "Autonomous Web Search (News)"
-    else:
-        curr_strategy = "Standard RSS Feeds Only"
+    new_rss = st.checkbox("📰 Standard RSS Feeds & APIs", value=is_rss, help="Collect articles from the explicit URLs you added below.")
+    new_auto = st.checkbox("🌐 Autonomous Web Search (News)", value=is_auto, help="Search the web autonomously for news about your Topics.")
+    new_yt = st.checkbox("📺 Autonomous YouTube Scraping", value=is_yt, help="Search YouTube autonomously for videos about your Topics.")
+    
+    if new_rss != is_rss or new_auto != is_auto or new_yt != is_yt:
+        st.session_state.config["enable_rss_feeds"] = new_rss
+        st.session_state.config["enable_autonomous_search"] = new_auto
+        st.session_state.config["enable_youtube_transcripts"] = new_yt
         
-    strategies = [
-        "Standard RSS Feeds Only", 
-        "Autonomous Web Search (News)", 
-        "Autonomous YouTube Scraping"
-    ]
-    
-    new_strategy = st.radio("Active Strategy:", options=strategies, index=strategies.index(curr_strategy), label_visibility="collapsed")
-    
-    if new_strategy != curr_strategy:
-        if new_strategy == "Standard RSS Feeds Only":
-            st.session_state.config["enable_autonomous_search"] = False
-            st.session_state.config["enable_youtube_transcripts"] = False
-        elif new_strategy == "Autonomous Web Search (News)":
-            st.session_state.config["enable_autonomous_search"] = True
-            st.session_state.config["enable_youtube_transcripts"] = False
-        elif new_strategy == "Autonomous YouTube Scraping":
-            st.session_state.config["enable_autonomous_search"] = True
-            st.session_state.config["enable_youtube_transcripts"] = True
-            
         save_config(st.session_state.config)
-        st.success(f"Strategy updated to: {new_strategy}")
+        st.success("Toggles updated!")
         time.sleep(1)
         st.rerun()
 
