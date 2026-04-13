@@ -5,6 +5,82 @@ import glob
 import time
 import urllib.parse
 from pathlib import Path
+import tempfile
+import threading
+
+@st.cache_data(show_spinner=False)
+def generate_pdf_bytes(md_str):
+    try:
+        from markdown_pdf import MarkdownPdf, Section
+        pdf_doc = MarkdownPdf(toc_level=2)
+        pdf_doc.add_section(Section(md_str))
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            pdf_doc.save(tmp.name)
+            with open(tmp.name, "rb") as f: data = f.read()
+        import os
+        os.unlink(tmp.name)
+        return data
+    except Exception as e:
+        print(f"PDF Error: {e}")
+        return b""
+
+@st.cache_data(show_spinner=False)
+def generate_docx_bytes(md_str):
+    try:
+        from Markdown2docx import Markdown2docx
+        import os
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_base = os.path.join(tmpdir, "report")
+            with open(file_base + ".md", "w", encoding="utf-8") as f: f.write(md_str)
+            # Markdown2docx requires os.chdir because it generates weird temp images relative to pwd?
+            # actually let's just run it
+            pro = Markdown2docx(file_base)
+            pro.eat_soup()
+            pro.save()
+            with open(file_base + ".docx", "rb") as f: data = f.read()
+        return data
+    except Exception as e:
+        print(f"DOCX Error: {e}")
+        return b""
+
+import tempfile
+import threading
+
+@st.cache_data(show_spinner=False)
+def generate_pdf_bytes(md_str):
+    try:
+        from markdown_pdf import MarkdownPdf, Section
+        pdf_doc = MarkdownPdf(toc_level=2)
+        pdf_doc.add_section(Section(md_str))
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            pdf_doc.save(tmp.name)
+            with open(tmp.name, "rb") as f: data = f.read()
+        import os
+        os.unlink(tmp.name)
+        return data
+    except Exception as e:
+        print(f"PDF Error: {e}")
+        return b""
+
+@st.cache_data(show_spinner=False)
+def generate_docx_bytes(md_str):
+    try:
+        from Markdown2docx import Markdown2docx
+        import os
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_base = os.path.join(tmpdir, "report")
+            with open(file_base + ".md", "w", encoding="utf-8") as f: f.write(md_str)
+            # Markdown2docx requires os.chdir because it generates weird temp images relative to pwd?
+            # actually let's just run it
+            pro = Markdown2docx(file_base)
+            pro.eat_soup()
+            pro.save()
+            with open(file_base + ".docx", "rb") as f: data = f.read()
+        return data
+    except Exception as e:
+        print(f"DOCX Error: {e}")
+        return b""
+
 from watcher.agents.synthesizer import call_llm
 
 import requests
@@ -545,13 +621,20 @@ if "Dashboard" in page:
                         """, unsafe_allow_html=True)
                         
                         d1, d2, d3, d4 = st.columns([6, 1, 1, 1])
+                        with open(report_path, "r", encoding="utf-8") as f:
+                            md_str = f.read()
+                            
+                        pdf_bytes = generate_pdf_bytes(md_str)
+                        docx_bytes = generate_docx_bytes(md_str)
+
                         with d2:
-                            with open(report_path, "rb") as f:
-                                st.download_button("↓ MD", f, file_name=report_path.name, key=f"md_{report_path.name}")
+                            st.download_button("↓ MD", md_str.encode("utf-8"), file_name=report_path.name, key=f"md_{report_path.name}")
                         with d3:
-                            st.button("↓ PDF", key=f"pdf_{report_path.name}", disabled=True, help="PDF generation not configured")
+                            pdf_name = report_path.name.replace(".md", ".pdf")
+                            st.download_button("↓ PDF", pdf_bytes, file_name=pdf_name, key=f"pdf_{report_path.name}", mime="application/pdf", disabled=len(pdf_bytes)==0)
                         with d4:
-                            st.button("↓ DOCX", key=f"docx_{report_path.name}", disabled=True, help="DOCX generation not configured")
+                            docx_name = report_path.name.replace(".md", ".docx")
+                            st.download_button("↓ DOCX", docx_bytes, file_name=docx_name, key=f"docx_{report_path.name}", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", disabled=len(docx_bytes)==0)
                     except Exception as e:
                         st.error(f"Error loading report {report_path.name}: {e}")
     else:
