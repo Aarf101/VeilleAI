@@ -1499,8 +1499,13 @@ elif "Advanced" in page:
     # 5. 🔍 RELEVANCE FILTER
     st.markdown('<span class="card-title mt-4">Relevance Filter</span>', unsafe_allow_html=True)
     
-    threshold = st.slider("Relevance Filter Threshold", 0.0, 1.0, config.get("relevance_threshold", 0.30), 0.05)
-    config['relevance_threshold'] = threshold
+    current_threshold_val = config.get("relevance_threshold", 0.30)
+    threshold = st.slider("Relevance Filter Threshold", 0.0, 1.0, current_threshold_val, 0.05)
+    
+    if threshold != current_threshold_val:
+        config['relevance_threshold'] = threshold
+        save_config(config)
+        st.session_state.config = config
     
     if threshold <= 0.3:
         badge = '<span style="background:#064e3b; color:#34d399; padding:2px 8px; border-radius:12px; font-size:0.8rem;">🟢 PERMISSIVE</span>'

@@ -196,7 +196,7 @@ def run_pipeline(config):
     config = ensure_feeds_for_topics(config)
     raw_topics = config.get('topics', [])
     topics = [t['name'] if isinstance(t, dict) else t for t in raw_topics]
-    threshold = min(config.get('relevance_threshold', 0.25), 0.30)
+    threshold = config.get('relevance_threshold', 0.25)
     
     # Step 1: Collect articles
     safe_print("Step 1: Collecting articles...")
