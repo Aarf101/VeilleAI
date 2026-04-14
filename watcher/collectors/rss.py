@@ -1,3 +1,4 @@
+import feedparser
 import requests
 import xml.etree.ElementTree as ET
 import socket
@@ -101,85 +102,48 @@ def fetch_feed_with_timeout(url, timeout=10):
         logger.warning(f"SKIPPED feed {url}: {e}")
         return None
 
-def _parse_rss_xml(content):
-    try:
-        root = ET.fromstring(content)
-    except ET.ParseError as e:
-        logger.warning(f"XML parse error: {e}")
-        return [], ""
-    
-    ns = {'atom': 'http://www.w3.org/2005/Atom',
-          'media': 'http://search.yahoo.com/mrss/'}
-    
-    # Detect feed type
-    tag = root.tag.lower()
-    entries = []
-    feed_title = ""
-    
-    if 'rss' in tag or root.find('channel') is not None:
-        # RSS format
-        channel = root.find('channel')
-        if channel is None:
-            return [], ""
-        feed_title = (channel.findtext('title') or '').strip()
-        for item in channel.findall('item'):
-            entries.append({
-                'title': (item.findtext('title') or '').strip(),
-                'link': (item.findtext('link') or '').strip(),
-                'published': (item.findtext('pubDate') or item.findtext('dc:date') or '').strip(),
-                'summary': (item.findtext('description') or '').strip(),
-                'content': (item.findtext('content:encoded') or item.findtext('description') or '').strip(),
-            })
-    elif 'feed' in tag:
-        # Atom format
-        feed_title_el = root.find('atom:title', ns) or root.find('title')
-        feed_title = (feed_title_el.text if feed_title_el is not None else '').strip()
-        for entry in (root.findall('atom:entry', ns) or root.findall('entry')):
-            link_el = entry.find('atom:link', ns) or entry.find('link')
-            link = ''
-            if link_el is not None:
-                link = link_el.get('href', '') or link_el.text or ''
-            title_el = entry.find('atom:title', ns) or entry.find('title')
-            summary_el = entry.find('atom:summary', ns) or entry.find('summary')
-            content_el = entry.find('atom:content', ns) or entry.find('content')
-            published_el = entry.find('atom:published', ns) or entry.find('published') or entry.find('updated')
-            entries.append({
-                'title': (title_el.text if title_el is not None else '').strip(),
-                'link': link.strip(),
-                'published': (published_el.text if published_el is not None else '').strip(),
-                'summary': (summary_el.text if summary_el is not None else '').strip(),
-                'content': (content_el.text if content_el is not None else '').strip(),
-            })
-    
-    return entries, feed_title
+import feedparser
 
 def fetch_rss(feed_url: str, max_items: int = 10) -> list[dict]:
     content = fetch_feed_with_timeout(feed_url, timeout=10)
     if not content:
         return []
     
-    entries, feed_title = _parse_rss_xml(content)
-    source = feed_title or feed_url
+    try:
+        parsed = feedparser.parse(content)
+    except Exception as e:
+        logger.warning(f"feedparser parse error for {feed_url}: {e}")
+        return []
+        
+    source = parsed.feed.get('title', feed_url)
     
     items = []
-    for entry in entries[:max_items]:
+    for entry in parsed.entries[:max_items]:
         link = entry.get('link', '')
+        
+        # Get safest summary
         summary = entry.get('summary', '')
-        content = entry.get('content', '') or summary
+        content_val = summary
+        if 'content' in entry and len(entry.content) > 0:
+            content_val = entry.content[0].get('value', summary)
+            
+        published = entry.get('published', '') or entry.get('updated', '')
         
         # If summary too short, try fetching from real page
-        clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+        clean_summary = re.sub(r'<[^>]+>', '', summary).strip() if summary else ''
         if len(clean_summary) < 50 and link:
             new_summary = _fetch_summary_from_url(link, timeout=5)
             if new_summary:
                 summary = new_summary
-        
+            if not content_val:
+                content_val = summary
+                
         items.append({
             'title': entry.get('title', ''),
             'link': link,
-            'published': entry.get('published', ''),
+            'published': published,
             'summary': summary,
-            'content': content,
+            'content': content_val,
             'source': source,
             'feed_url': feed_url,
             'fetched_at': datetime.utcnow().isoformat() + 'Z',

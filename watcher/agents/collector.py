@@ -118,17 +118,23 @@ class CollectorAgent:
                     if link and getattr(self.storage, "article_exists", None):
                         if self.storage.article_exists(link):
                             logger.debug(f"Skipping duplicate by URL: {link}")
+                            if not config.get("include_historical", True):
+                                new_items.append(item)
                             return
                             
                     if title and getattr(self.storage, "article_exists_by_title", None):
                         if self.storage.article_exists_by_title(title, source):
                             logger.debug(f"Skipping duplicate by title from same source: {title}")
+                            if not config.get("include_historical", True):
+                                new_items.append(item)
                             return
 
                     # Fallback old method if defined, just in case
                     if title and getattr(self.storage, "title_exists", None) and not getattr(self.storage, "article_exists_by_title", None):
                         if self.storage.title_exists(title):
                             logger.debug(f"Skipping duplicate by title (legacy): {title}")
+                            if not config.get("include_historical", True):
+                                new_items.append(item)
                             return
 
                     res = self.storage.save_item(item)
