@@ -179,17 +179,8 @@ def ensure_feeds_for_topics(config):
         'stock', 'venture', 'startup', 'funding'
     ]
     
-    needs_finance = any(
-        any(kw in (t['name'] if isinstance(t, dict) else t).lower() for kw in finance_keywords)
-        for t in topics
-    )
-    
-    if needs_finance:
-        for feed in FINANCE_FEEDS:
-            if feed not in feeds:
-                feeds.append(feed)
-        config['feeds'] = feeds
-    
+    # We will no longer force inject feeds against the user's will.
+    # The user should have full control over what feeds are scraped.
     return config
 
 def run_pipeline(config):
