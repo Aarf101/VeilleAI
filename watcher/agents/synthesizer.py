@@ -299,7 +299,7 @@ Topics: {', '.join(topic_names)} | Articles: {total_arts} | Sources: {all_source
 def get_friendly_error(error, provider):
     error_str = str(error).lower()
     
-    if 'no articles collected' in error_str or '0 articles' in error_str:
+    if 'error: no articles collected!' in error_str:
         return {
             'type':    'no_data',
             'title':   'Aucun article trouvé !',
