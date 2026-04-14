@@ -205,7 +205,7 @@ def generate_report(filtered_by_topic, config, llm_client):
     topics = config.get('topics', [])
     
     model = config.get('model') or config.get('api_model', '')
-    if not model or model in ['llama3-70b-8192', 'llama3-8b-8192', 'Default', '', None]:
+    if not model or model in ['Default', '', None]:
         provider = config.get('provider', 'groq')
         if provider == 'gemini':
             model = 'gemini-2.0-flash'

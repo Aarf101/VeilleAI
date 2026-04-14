@@ -1452,6 +1452,14 @@ elif "Advanced" in page:
 
     st.markdown('</div>', unsafe_allow_html=True)
     
+    st.markdown('<div class="v-card" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);"><span class="card-title">Cloud Provider Model</span>', unsafe_allow_html=True)
+    cloud_model = st.text_input("Active Provider Model Name", value=config.get('model', 'llama-3.3-70b-versatile'), key="cloud_model_input")
+    if cloud_model != config.get('model'):
+        config['model'] = cloud_model
+        save_config(config)
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('<div class="v-card" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);"><span class="card-title">Ollama (Local)</span>', unsafe_allow_html=True)
     
     # Status Check
