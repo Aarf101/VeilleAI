@@ -1243,15 +1243,18 @@ elif "Data Sources" in page:
     is_rss = st.session_state.config.get("enable_rss_feeds", True)
     is_auto = st.session_state.config.get("enable_autonomous_search", False)
     is_yt = st.session_state.config.get("enable_youtube_transcripts", False)
+    is_hist = st.session_state.config.get("include_historical", True)
     
     new_rss = st.checkbox("📰 Standard RSS Feeds & APIs", value=is_rss, help="Collect articles from the explicit URLs you added below.")
     new_auto = st.checkbox("🌐 Autonomous Web Search (News)", value=is_auto, help="Search the web autonomously for news about your Topics.")
     new_yt = st.checkbox("📺 Autonomous YouTube Scraping", value=is_yt, help="Search YouTube autonomously for videos about your Topics.")
+    new_hist = st.checkbox("🗄️ Include Historical Database Articles", value=is_hist, help="Allow the AI to pull relevant older articles you previously scraped into the new report.")
     
-    if new_rss != is_rss or new_auto != is_auto or new_yt != is_yt:
+    if new_rss != is_rss or new_auto != is_auto or new_yt != is_yt or new_hist != is_hist:
         st.session_state.config["enable_rss_feeds"] = new_rss
         st.session_state.config["enable_autonomous_search"] = new_auto
         st.session_state.config["enable_youtube_transcripts"] = new_yt
+        st.session_state.config["include_historical"] = new_hist
         
         save_config(st.session_state.config)
         st.success("Toggles updated!")

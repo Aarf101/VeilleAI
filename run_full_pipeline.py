@@ -204,8 +204,12 @@ def run_pipeline(config):
     safe_print(f"New: {len(new_articles)} articles")
 
     # Also get recent from DB
-    db_articles = get_recent_articles_from_db(config)
-    safe_print(f"From DB: {len(db_articles)} articles")
+    db_articles = []
+    if config.get("include_historical", True):
+        db_articles = get_recent_articles_from_db(config)
+        safe_print(f"From DB: {len(db_articles)} articles")
+    else:
+        safe_print("Historical database inclusion disabled by config.")
 
     # Combine both
     all_articles = new_articles + db_articles
