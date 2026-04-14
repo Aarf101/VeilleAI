@@ -1,5 +1,5 @@
 chroma_path: ./chroma_db
-enable_autonomous_search: true
+enable_autonomous_search: false
 enable_rss_feeds: true
 enable_trending_weighting: false
 enable_youtube_transcripts: false
@@ -33,12 +33,12 @@ feeds_enabled:
   https://feeds.feedburner.com/TheHackersNews: false
   https://feeds.feedburner.com/venturebeat/SZY: false
   https://huggingface.co/blog/feed.xml: false
-  https://krebsonsecurity.com/feed/: false
+  https://krebsonsecurity.com/feed/: true
   https://news.ycombinator.com/rss: false
   https://techcrunch.com/category/artificial-intelligence/feed/: false
   https://techcrunch.com/feed/: false
   https://venturebeat.com/category/ai/feed/: false
-  https://www.artificialintelligence-news.com/feed/: true
+  https://www.artificialintelligence-news.com/feed/: false
   https://www.bleepingcomputer.com/feed/: false
   https://www.theverge.com/rss/index.xml: false
   https://www.wired.com/feed/rss: false
@@ -64,15 +64,16 @@ feeds_weight:
   https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: 1.7
   https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA: 0.4
   https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw: 1.6
+include_historical: false
 items_per_feed: 30
 llm_enabled: true
 max_articles_to_llm: 56
-model: llama-3.3-70b-versatile
+model: llama-3.1-8b-instant
 news_language: 🇫🇷 Français
 ollama_model: llama3
 provider: groq
 recency_boost: true
-relevance_threshold: 0.45
+relevance_threshold: 0.1
 schedule_fixed_hours:
 - '20:55'
 schedule_interval_minutes: 5
@@ -117,3 +118,7 @@ topics:
     jack sim card microsd card touchscreen display fingerprint sensor facial recognition
     wireless charging near field communication bluetooth connectivity
   name: phone
+- description: Blockchain analysis wallet tracking transaction monitoring cryptocurrency
+    exchange market trends price volatility mining malware detection smart contracts
+    decentralized finance regulatory compliance risk management security audits
+  name: Cryptocurrency
