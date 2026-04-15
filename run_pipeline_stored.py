@@ -78,7 +78,7 @@ def run_full_pipeline_with_stored():
     print(f"{'='*70}")
     
     filter_agent = FilterAgent()
-    threshold = config.get('filter_threshold', 0.40)  # Lower default to show full pipeline
+    threshold = config.get('relevance_threshold', 0.40)  # Lower default to show full pipeline
     filtered_items = filter_agent.filter(
         collected_items, 
         topics=topics,

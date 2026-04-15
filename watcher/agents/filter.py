@@ -107,36 +107,31 @@ class SmartFilter:
             final_score = 1.0
             method = 'google_news'
         else:
-            # METHOD 2: Direct keyword match in title
+            # Evaluate all methods and take the highest base score
             title = (article.get('title', '') or '').lower()
             topic_words = [
                 w.lower() for w in topic.split() 
                 if len(w) > 2
             ]
             title_match = any(w in title for w in topic_words)
-            if title_match:
-                final_score = 0.9
+            kw_score = self.keyword_score(article, topic)
+            sem_score = self.semantic_score(article, topic)
+            combined = (kw_score * 0.6) + (sem_score * 0.4)
+            
+            best_score = combined
+            method = 'combined'
+            
+            if sem_score > best_score:
+                best_score = sem_score
+                method = 'semantic'
+            if kw_score > best_score:
+                best_score = kw_score
+                method = 'keyword'
+            if title_match and 0.9 > best_score:
+                best_score = 0.9
                 method = 'title_keyword'
-            else:
-                # METHOD 3: Keyword in full text
-                kw_score = self.keyword_score(article, topic)
-                if kw_score >= 0.5:
-                    final_score = kw_score
-                    method = 'keyword'
-                else:
-                    # METHOD 4: Semantic similarity
-                    sem_score = self.semantic_score(article, topic)
-                    if sem_score >= self.threshold:
-                        final_score = sem_score
-                        method = 'semantic'
-                    else:
-                        # Combined score check
-                        combined = (kw_score * 0.6) + (sem_score * 0.4)
-                        if combined >= 0.35:
-                            final_score = combined
-                            method = 'combined'
-                        else:
-                            return False, 0.0, 'rejected'
+                
+            final_score = best_score
 
         # Apply source weight multiplication
         feed_url = article.get('feed_url', '') or article.get('source', '')

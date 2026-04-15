@@ -69,6 +69,7 @@ class CollectorAgent:
                 "summary": summary,
                 "content": content,
                 "source": source,
+                "feed_url": entry.get("feed_url") or "",
                 "fetched_at": entry.get("fetched_at"),
             }
 
