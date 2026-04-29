@@ -98,6 +98,78 @@ def load_dotenv_vars():
                     env_vars[key.strip()] = value.strip()
     return env_vars
 
+
+@st.cache_data(show_spinner=False)
+def generate_tts_bytes(text: str, lang: str = 'en') -> bytes:
+    """Generate TTS audio bytes for given text.
+
+    Tries `gTTS` (mp3) first, falls back to `pyttsx3` (wav) if available.
+    Returns raw bytes or raises ImportError if no backend available.
+    """
+    if not text:
+        return b""
+
+    import tempfile
+    import os
+
+    # Try gTTS (produces mp3)
+    try:
+        from gtts import gTTS
+        tts = gTTS(text=text, lang=lang)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+            tmp_name = tmp.name
+        try:
+            tts.save(tmp_name)
+            with open(tmp_name, 'rb') as f:
+                data = f.read()
+        finally:
+            try: os.unlink(tmp_name)
+            except: pass
+        return data
+    except Exception:
+        # Fallback to pyttsx3 (may produce wav)
+        try:
+            import pyttsx3
+            engine = pyttsx3.init()
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp:
+                tmp_name = tmp.name
+            engine.save_to_file(text, tmp_name)
+            engine.runAndWait()
+            with open(tmp_name, 'rb') as f:
+                data = f.read()
+            try: os.unlink(tmp_name)
+            except: pass
+            return data
+        except Exception as e:
+            raise ImportError('No TTS backend available (install gTTS or pyttsx3)') from e
+
+
+    def generate_podcast_summary(text: str, cfg: dict, minutes: int = 2) -> str:
+        """Use the configured LLM to produce a podcast-style spoken script summarizing `text`.
+
+        The function returns the generated script (plain text) ready for TTS.
+        """
+        if not text:
+            return ""
+
+        # Keep prompt length reasonable
+        snippet = text if len(text) <= 8000 else text[:8000]
+        prompt = (
+            f"You are an engaging podcast host. Produce a conversational, spoken-style script "
+            f"for a {minutes}-minute podcast segment that summarizes the following intelligence report. "
+            "Start with a short 1-sentence hook, then 3 short paragraphs: Key Developments, Implications, and What to Watch Next. "
+            "Use natural, listener-friendly phrasing as if speaking to a general tech audience. Keep it concise and lively. "
+            "Do NOT include markdown, titles, or meta commentary — output only the spoken script.\n\n"
+            f"Report:\n{snippet}"
+        )
+
+        try:
+            out = call_llm(prompt, cfg)
+            # Clean output
+            return out.strip()
+        except Exception as e:
+            return f"Podcast summary generation failed: {e}"
+
 def save_api_key_to_env(key_name, key_value):
     env_path = Path('.env')
     lines = []
@@ -182,13 +254,13 @@ def get_best_model(provider):
 def show_friendly_error(error_info, config):
     st.markdown(f"""
 <div style="background:rgba(239,68,68,0.1); border-left:3px solid #ef4444; border-radius:8px;padding:16px; margin:10px 0">
-  <div style="font-size:14px;font-weight:600; color:#f87171;margin-bottom:8px">
+  <div style="font-size:1rem;font-weight:600; color:#f87171;margin-bottom:8px">
     ✕ {error_info['title']}
   </div>
-  <div style="font-size:13px;color:#94a3b8; margin-bottom:8px">
+  <div style="font-size:0.9rem;color:#94a3b8; margin-bottom:8px">
     {error_info['message']}
   </div>
-  <div style="font-size:12px;color:#64748b; white-space:pre-line">
+  <div style="font-size:0.85rem;color:#64748b; white-space:pre-line">
     {error_info['solution']}
   </div>
 </div>
@@ -320,11 +392,11 @@ with st.sidebar:
         f"{len(yaml.safe_load(open(CONFIG_PATH)).get('feeds',[]))}"
     )
     st.markdown("""
-        <div class="sidebar-header">
-            <div class="logo">Veille<span>AI</span></div>
-            <div class="subtitle">INTELLIGENCE MONITOR</div>
-        </div>
-    """, unsafe_allow_html=True)
+<div class="sidebar-header">
+    <div class="logo">Veille<span>AI</span></div>
+    <div class="subtitle">INTELLIGENCE MONITOR</div>
+</div>
+""", unsafe_allow_html=True)
     
     css_styles = """
     <style>
@@ -338,7 +410,7 @@ with st.sidebar:
         align-items: center !important;
         padding: 10px 14px !important;
         border-radius: 8px !important;
-        font-size: 14px !important;
+        font-size:1rem !important;
         font-weight: 500 !important;
         color: #64748b !important;
         cursor: pointer !important;
@@ -387,12 +459,12 @@ with st.sidebar:
     prov_color = "green" if prov_ok_sidebar else "gray"
 
     st.markdown(f"""
-        <div class="sidebar-footer">
-            <div class="status-item">Database <span class="dot green">●</span></div>
-            <div class="status-item">Scheduler <span class="dot green">●</span></div>
-            <div class="status-item">{active_prov_sidebar} <span class="dot {prov_color}">●</span></div>
-        </div>
-    """, unsafe_allow_html=True)
+<div class="sidebar-footer">
+    <div class="status-item">Database <span class="dot green">●</span></div>
+    <div class="status-item">Scheduler <span class="dot green">●</span></div>
+    <div class="status-item">{active_prov_sidebar} <span class="dot {prov_color}">●</span></div>
+</div>
+""", unsafe_allow_html=True)
 
 def _header_article_count():
     db_path = config.get('sqlite_path', 'watcher.db')
@@ -441,14 +513,14 @@ prov_model = f"{config.get('provider', 'N/A').upper()} · {config.get('model', '
 
 # --- Top Header ---
 st.markdown(f"""
-    <div class="top-header">
-        <div class="wordmark">VeilleAI</div>
-        <div class="header-right">
-            <span class="v-badge badge-blue">{prov_model}</span>
-            <span class="v-badge badge-blue">{article_count} articles</span>
-            <span class="v-badge badge-blue">{rss_count} feeds</span>
-        </div>
+<div class="top-header">
+    <div class="wordmark">VeilleAI</div>
+    <div class="header-right">
+        <span class="v-badge badge-blue">{prov_model}</span>
+        <span class="v-badge badge-blue">{article_count} articles</span>
+        <span class="v-badge badge-blue">{rss_count} feeds</span>
     </div>
+</div>
 """, unsafe_allow_html=True)
 
 # --- Pages ---
@@ -458,48 +530,48 @@ if "Dashboard" in page:
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(f"""
-        <div class="v-card stat-card">
-            <div class="stat-accent accent-blue"></div>
-            <span class="card-title">Total Articles</span>
-            <div class="stat-number blue">{article_count}</div>
-            <div class="stat-subtitle">In Database</div>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card stat-card">
+    <div class="stat-accent accent-blue"></div>
+    <span class="card-title">Total Articles</span>
+    <div class="stat-number blue">{article_count}</div>
+    <div class="stat-subtitle">In Database</div>
+</div>
+""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"""
-        <div class="v-card stat-card">
-            <div class="stat-accent accent-green"></div>
-            <span class="card-title">Active Sources</span>
-            <div class="stat-number">{rss_count}</div>
-            <div class="stat-subtitle">Connected</div>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card stat-card">
+    <div class="stat-accent accent-green"></div>
+    <span class="card-title">Active Sources</span>
+    <div class="stat-number">{rss_count}</div>
+    <div class="stat-subtitle">Connected</div>
+</div>
+""", unsafe_allow_html=True)
     with c3:
         st.markdown(f"""
-        <div class="v-card stat-card">
-            <div class="stat-accent accent-amber"></div>
-            <span class="card-title">Topics</span>
-            <div class="stat-number">{len(config.get('topics', []))}</div>
-            <div class="stat-subtitle">Monitored</div>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card stat-card">
+    <div class="stat-accent accent-amber"></div>
+    <span class="card-title">Topics</span>
+    <div class="stat-number">{len(config.get('topics', []))}</div>
+    <div class="stat-subtitle">Monitored</div>
+</div>
+""", unsafe_allow_html=True)
     with c4:
         st.markdown(f"""
-        <div class="v-card stat-card">
-            <div class="stat-accent accent-gray"></div>
-            <span class="card-title">RSS Feeds</span>
-            <div class="stat-number">{rss_count}</div>
-            <div class="stat-subtitle">Configured</div>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card stat-card">
+    <div class="stat-accent accent-gray"></div>
+    <span class="card-title">RSS Feeds</span>
+    <div class="stat-number">{rss_count}</div>
+    <div class="stat-subtitle">Configured</div>
+</div>
+""", unsafe_allow_html=True)
     
     col_l, col_r = st.columns([2, 1])
     with col_l:
         st.markdown("""
-        <div class="v-card">
-            <span class="card-title">Monitored Topics</span>
-            <div class="topic-container">
-        """, unsafe_allow_html=True)
+<div class="v-card">
+    <span class="card-title">Monitored Topics</span>
+    <div class="topic-container">
+""", unsafe_allow_html=True)
         # Render topics dynamically from disk
         saved_topics = []
         if CONFIG_PATH.exists():
@@ -530,13 +602,13 @@ if "Dashboard" in page:
         interval_text = f"Every {h}h {m}m" if h > 0 else f"Every {m} mins"
 
         st.markdown(f"""
-        <div class="v-card">
-            <span class="card-title">System Status</span>
-            <div class="v-list-item"><span>Scheduler Status</span> {sched_status}</div>
-            <div class="v-list-item"><span>Database Status</span> {db_status}</div>
-            <div class="v-list-item" style="border:none;"><span>Collection Interval</span> <span style="font-size:0.9rem; color:#9ca3af;">{interval_text}</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card">
+    <span class="card-title">System Status</span>
+    <div class="v-list-item"><span>Scheduler Status</span> {sched_status}</div>
+    <div class="v-list-item"><span>Database Status</span> {db_status}</div>
+    <div class="v-list-item" style="border:none;"><span>Collection Interval</span> <span style="font-size:0.9rem; color:#9ca3af;">{interval_text}</span></div>
+</div>
+""", unsafe_allow_html=True)
         
     with col_r:
         st.markdown('<div class="v-card"><span class="card-title">Quick Actions</span>', unsafe_allow_html=True)
@@ -575,11 +647,11 @@ if "Dashboard" in page:
         
         feed_html = "".join([f'<div class="v-list-item" style="font-size:0.8rem; color:#9ca3af;">{f}</div>' for f in config.get('feeds', [])])
         st.markdown(f"""
-        <div class="v-card">
-            <span class="card-title">Data Sources</span>
-            {feed_html}
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card">
+    <span class="card-title">Data Sources</span>
+    {feed_html}
+</div>
+""", unsafe_allow_html=True)
 
     # Intelligence Reports full-width
     st.markdown('<div class="v-card"><span class="card-title">Intelligence Reports</span>', unsafe_allow_html=True)
@@ -612,15 +684,15 @@ if "Dashboard" in page:
                         title = report_path.stem.replace('_', ' ').title()
                         
                         st.markdown(f"""
-                        <div class="report-row">
-                            <div>
-                                <div class="report-date">{dt}</div>
-                                <div class="report-title">{title}</div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+<div class="report-row">
+    <div>
+        <div class="report-date">{dt}</div>
+        <div class="report-title">{title}</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
                         
-                        d1, d2, d3, d4 = st.columns([6, 1, 1, 1])
+                        d1, d2, d3, d4, d5, d6 = st.columns([4, 1, 1, 1, 1, 1])
                         with open(report_path, "r", encoding="utf-8") as f:
                             md_str = f.read()
                             
@@ -635,6 +707,16 @@ if "Dashboard" in page:
                         with d4:
                             docx_name = report_path.name.replace(".md", ".docx")
                             st.download_button("↓ DOCX", docx_bytes, file_name=docx_name, key=f"docx_{report_path.name}", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", disabled=len(docx_bytes)==0)
+                        
+                        audio_path = report_path.with_suffix(".mp3")
+                        if audio_path.exists():
+                            with d5:
+                                with open(audio_path, "rb") as af:
+                                    audio_bytes = af.read()
+                                st.download_button("↓ MP3", audio_bytes, file_name=audio_path.name, key=f"mp3_{report_path.name}", mime="audio/mpeg")
+                            with d6:
+                                if st.button("🔊", key=f"play_dash_{report_path.name}"):
+                                    st.audio(audio_path)
                     except Exception as e:
                         st.error(f"Error loading report {report_path.name}: {e}")
     else:
@@ -655,6 +737,7 @@ if "Dashboard" in page:
             with st.expander(f"{safe_title} - {safe_source} ({safe_pub})"):
                 st.write(summary if summary else "No summary available.")
     st.markdown('</div>', unsafe_allow_html=True)
+
 
 elif "Run Pipeline" in page:
     st.markdown('<div class="v-card"><span class="card-title">Run Pipeline</span>', unsafe_allow_html=True)
@@ -689,24 +772,24 @@ elif "Run Pipeline" in page:
              speed_bar, quality_bar = "██████████ Very Fast", "█████░░░░░ Moderate"
              
         st.markdown(f"""
-        <div style="background:rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-            <strong style="color:#10b981;">ACTIVE PROVIDER</strong><br/><br/>
-            ✓ {active_prov} · {active_model}<br/>
-            API Key found — ready to run<br/><br/>
-            Speed:   {speed_bar}<br/>
-            Quality: {quality_bar}<br/>
-            Cost:    {cost_bar}
-        </div>
-        """, unsafe_allow_html=True)
+<div style="background:rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+    <strong style="color:#10b981;">ACTIVE PROVIDER</strong><br/><br/>
+    ✓ {active_prov} · {active_model}<br/>
+    API Key found — ready to run<br/><br/>
+    Speed:   {speed_bar}<br/>
+    Quality: {quality_bar}<br/>
+    Cost:    {cost_bar}
+</div>
+""", unsafe_allow_html=True)
         can_run = True
     else:
         st.markdown(f"""
-        <div style="background:rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-            <strong style="color:#ef4444;">✗ CANNOT RUN</strong><br/><br/>
-            Provider "{active_prov}" needs an API Key but it was not found in .env<br/><br/>
-            Available alternatives you can use NOW:
-        </div>
-        """, unsafe_allow_html=True)
+<div style="background:rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+    <strong style="color:#ef4444;">✗ CANNOT RUN</strong><br/><br/>
+    Provider "{active_prov}" needs an API Key but it was not found in .env<br/><br/>
+    Available alternatives you can use NOW:
+</div>
+""", unsafe_allow_html=True)
         can_run = False
         
         cols = st.columns(min(len([p for p, d in available_providers.items() if d['available']]), 4) or 1)
@@ -756,13 +839,13 @@ elif "Run Pipeline" in page:
         st.markdown('<div class="v-alert alert-warn">⚠ No topics configured — your report may not be focused. Go to Topics page to add some.</div>', unsafe_allow_html=True)
     
     st.markdown(f"""
-    <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:8px; margin-bottom:1rem; font-size:0.85rem; color:#9ca3af;">
-        Provider: <strong>{config.get('provider')}</strong> | 
-        Model: <strong>{config.get('model')}</strong> | 
-        Items/Feed Limit: <strong>{config.get('items_per_feed')}</strong> | 
-        Max Articles for LLM: <strong>{config.get('max_articles_to_llm')}</strong>
-    </div>
-    """, unsafe_allow_html=True)
+<div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:8px; margin-bottom:1rem; font-size:0.85rem; color:#9ca3af;">
+    Provider: <strong>{config.get('provider')}</strong> | 
+    Model: <strong>{config.get('model')}</strong> | 
+    Items/Feed Limit: <strong>{config.get('items_per_feed')}</strong> | 
+    Max Articles for LLM: <strong>{config.get('max_articles_to_llm')}</strong>
+</div>
+""", unsafe_allow_html=True)
     
     if st.button("▶ Run Full Pipeline", type="primary", use_container_width=True, disabled=not can_run):
         with st.spinner("Executing pipeline..."):
@@ -805,6 +888,7 @@ elif "Run Pipeline" in page:
                             parts = Path(latest).stem.split('_')
                             topic = parts[-1] if len(parts) >= 4 else "Global"
                             
+                            safe_key = Path(latest).name
                             st.markdown(f'#### 📑 Category: {topic}')
                             with open(latest, 'r', encoding='utf-8') as f:
                                 content = f.read()
@@ -812,9 +896,47 @@ elif "Run Pipeline" in page:
                             st.markdown(f"""<div style="background:#0a0c10; padding:2rem; border-radius:12px; border:1px solid rgba(255,255,255,0.07); margin-bottom:1rem; height:400px; overflow-y:auto;">
                             {content}
                             </div>""", unsafe_allow_html=True)
+
+                            # Prefer pre-generated MP3 audio file if present (no fallback)
+                            audio_file_mp3 = Path(latest).with_suffix('.mp3')
+                            tts_cols = st.columns([1,1,4])
+                            if audio_file_mp3.exists():
+                                # Show existing audio controls (mp3 only)
+                                audio_path = str(audio_file_mp3)
+                                with open(audio_path, 'rb') as af:
+                                    audio_bytes = af.read()
+                                with tts_cols[0]:
+                                    if st.button("🔊 Play Podcast (pre-generated)", key=f"play_pre_tts_{safe_key}"):
+                                        st.audio(audio_bytes)
+                                with tts_cols[1]:
+                                    st.download_button("⬇ Download Podcast", data=audio_bytes, file_name=Path(audio_path).name, mime='audio/mpeg', key=f"dl_pre_tts_file_{safe_key}")
+                            else:
+                                # Fall back to on-demand generation
+                                with tts_cols[0]:
+                                    if st.button("🔊 Play Podcast Summary", key=f"play_tts_{safe_key}"):
+                                        try:
+                                            summary_script = generate_podcast_summary(content, st.session_state.config, minutes=2)
+                                            # show script for user confirmation
+                                            with st.expander("Podcast script (generated)", expanded=False):
+                                                st.write(summary_script)
+                                            audio_bytes = generate_tts_bytes(summary_script)
+                                            st.audio(audio_bytes)
+                                        except ImportError as ie:
+                                            st.error(str(ie))
+                                        except Exception as e:
+                                            st.error(f"Podcast TTS generation failed: {e}")
+                                with tts_cols[1]:
+                                    if st.button("⬇ Download Podcast", key=f"dl_tts_{safe_key}"):
+                                        try:
+                                            summary_script = generate_podcast_summary(content, st.session_state.config, minutes=2)
+                                            audio_bytes = generate_tts_bytes(summary_script)
+                                            st.download_button("Download audio", data=audio_bytes, file_name=safe_key.replace('.md', '.mp3'), mime='audio/mpeg', key=f"dl_tts_file_{safe_key}")
+                                        except ImportError as ie:
+                                            st.error(str(ie))
+                                        except Exception as e:
+                                            st.error(f"Podcast TTS generation failed: {e}")
                             
                             d1, d2, d3, d4 = st.columns([1,1,1,5])
-                            safe_key = Path(latest).name
                             with d1:
                                 st.download_button("↓ MD", content, file_name=safe_key, key=f"dl_pipeline_md_{safe_key}")
                             with d2:
@@ -966,14 +1088,14 @@ elif "Scheduler" in page:
     # --- STATUS CARD ---
     if running_state:
         st.markdown(f"""
-        <div class="v-card">
-            <span class="card-title">Scheduler Status</span>
-            <div class="v-list-item">State: {status_badge}</div>
-            <div class="v-list-item">Mode: <span style="font-weight:500;">{current_mode}</span></div>
-            <div class="v-list-item">Next run: <span style="font-weight:500;">{next_run_text}</span></div>
-            <div class="v-list-item" style="border:none;">Process ID: <span style="font-weight:500;">{pid_display}</span></div>
-            <div class="mt-2" style="padding-top:0.5rem; border-top:1px solid rgba(255,255,255,0.05);">
-        """, unsafe_allow_html=True)
+<div class="v-card">
+    <span class="card-title">Scheduler Status</span>
+    <div class="v-list-item">State: {status_badge}</div>
+    <div class="v-list-item">Mode: <span style="font-weight:500;">{current_mode}</span></div>
+    <div class="v-list-item">Next run: <span style="font-weight:500;">{next_run_text}</span></div>
+    <div class="v-list-item" style="border:none;">Process ID: <span style="font-weight:500;">{pid_display}</span></div>
+    <div class="mt-2" style="padding-top:0.5rem; border-top:1px solid rgba(255,255,255,0.05);">
+""", unsafe_allow_html=True)
         
         c1, c2, c3 = st.columns([1, 4, 1])
         with c2:
@@ -989,14 +1111,14 @@ elif "Scheduler" in page:
         
     else:
         st.markdown(f"""
-        <div class="v-card">
-            <span class="card-title">Scheduler Status</span>
-            <div class="v-list-item" style="border:none;">State: {status_badge}</div>
-            <div style="font-size:0.85rem; color:#9ca3af; margin-top:0.5rem;">
-                Configure your schedule below then click Start when ready
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="v-card">
+    <span class="card-title">Scheduler Status</span>
+    <div class="v-list-item" style="border:none;">State: {status_badge}</div>
+    <div style="font-size:0.85rem; color:#9ca3af; margin-top:0.5rem;">
+        Configure your schedule below then click Start when ready
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
     # --- CONFIGURATION SECTION ---
     if running_state:
@@ -1183,8 +1305,8 @@ elif "Topics" in page:
         
         col_text, col_del = st.columns([10, 1])
         with col_text:
-            st.markdown(f'<div style="font-weight:bold; font-size:16px;">{name}</div>', unsafe_allow_html=True)
-            st.markdown(f'<div style="color:gray; font-size:12px; margin-bottom:10px;">{description}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-weight:bold; font-size:1.15rem;">{name}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="color:gray; font-size:0.85rem; margin-bottom:10px;">{description}</div>', unsafe_allow_html=True)
         with col_del:
             if st.button("✕", key=f"del_topic_{name}"):
                 st.session_state.config['topics'].remove(t)
@@ -1351,12 +1473,12 @@ elif "Data Sources" in page:
                 changed = True
                 
         with c_url:
-            st.markdown(f'<div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-top:8px;">{f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-top:8px;">{f}</div>', unsafe_allow_html=True)
             
         with c_badge:
             badge = "YT" if "youtube.com" in f else "RSS"
             color = "#ff0000" if badge == "YT" else "#3b82f6"
-            st.markdown(f'<span style="background:{color}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">{badge}</span>', unsafe_allow_html=True)
+            st.markdown(f'<span style="background:{color}; color:white; padding:2px 6px; border-radius:4px; font-size:0.7rem;">{badge}</span>', unsafe_allow_html=True)
             
         with c_weight:
             current_w = float(feeds_weight.get(f, 1.0))
@@ -1386,12 +1508,12 @@ elif "Advanced" in page:
     current_threshold = config.get("relevance_threshold", 0.30)
     if current_threshold > 0.6:
         st.markdown(f"""
-        <div style='background:rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;'>
-            <strong>⚠️ WARNING: Your filter is very strict</strong><br/>
-            Threshold: {current_threshold:.2f} <br/>
-            This may cause empty reports!
-        </div>
-        """, unsafe_allow_html=True)
+<div style='background:rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;'>
+    <strong>⚠️ WARNING: Your filter is very strict</strong><br/>
+    Threshold: {current_threshold:.2f} <br/>
+    This may cause empty reports!
+</div>
+""", unsafe_allow_html=True)
         if st.button("🔧 Fix it — Set to 0.30", key="fix_threshold"):
             config["relevance_threshold"] = 0.30
             save_config(config)
@@ -1659,6 +1781,150 @@ elif "Monitoring" in page:
     with c3: st.metric("Oldest Entry", str(oldest))
     with c4: st.metric("Latest Entry", str(latest))
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- NEW: SYSTEM ACTIVITY SECTION ---
+    try:
+        import pandas as pd
+        with sqlite3.connect(db_path) as conn_act:
+            # Collection Activity (last 14 days)
+            q_act = "SELECT date(fetched_at) as day, count(*) as count FROM items WHERE fetched_at IS NOT NULL GROUP BY day ORDER BY day DESC LIMIT 14"
+            df_act = pd.read_sql_query(q_act, conn_act)
+            
+            # Source Distribution
+            q_src = "SELECT source, count(*) as count FROM items GROUP BY source ORDER BY count DESC LIMIT 10"
+            df_src = pd.read_sql_query(q_src, conn_act)
+            
+            scol1, scol2 = st.columns([2, 1])
+            with scol1:
+                st.markdown('<div class="v-card"><span class="card-title">Collection Activity (Articles/Day)</span>', unsafe_allow_html=True)
+                if not df_act.empty:
+                    df_act = df_act.sort_values('day')
+                    st.line_chart(df_act.set_index('day'))
+                else:
+                    st.info("No activity data yet.")
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+            with scol2:
+                st.markdown('<div class="v-card"><span class="card-title">Top 10 Sources</span>', unsafe_allow_html=True)
+                if not df_src.empty:
+                    # Simplified bar chart as pie fallback
+                    st.bar_chart(df_src.set_index('source'))
+                else:
+                    st.info("No source data.")
+                st.markdown('</div>', unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Error loading activity metrics: {e}")
+
+    # --- TRENDS SECTION (Imported from Trends & Insights) ---
+    db_path_trends = _resolve_db_path()
+    if os.path.exists(db_path_trends):
+        import pandas as pd
+        with sqlite3.connect(db_path_trends) as conn_trends:
+            # Top entities overall
+            query_trends = '''
+            SELECT e.name, count(ie.item_id) as mentions
+            FROM entities e
+            JOIN item_entities ie ON e.id = ie.entity_id
+            GROUP BY e.name
+            ORDER BY mentions DESC
+            LIMIT 15
+            '''
+            df_trends = pd.read_sql_query(query_trends, conn_trends)
+
+            if not df_trends.empty:
+                tcol1, tcol2 = st.columns(2)
+                with tcol1:
+                    st.markdown('<div class="v-card"><span class="card-title">Most Mentioned (All Time)</span>', unsafe_allow_html=True)
+                    st.bar_chart(df_trends.set_index("name"))
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # Time series for top 5 entities over last 30 days
+                from datetime import datetime, timedelta
+                end_trends = datetime.utcnow()
+                start_trends = end_trends - timedelta(days=30)
+                ts_query_trends = '''
+                SELECT e.name as entity, date(ie.mention_time) as day, COUNT(*) as cnt
+                FROM entities e
+                JOIN item_entities ie ON e.id = ie.entity_id
+                WHERE ie.mention_time >= ?
+                GROUP BY e.name, day
+                '''
+                df_ts_trends = pd.read_sql_query(ts_query_trends, conn_trends, params=(start_trends.isoformat(),))
+                with tcol2:
+                    if not df_ts_trends.empty:
+                        top5_trends = df_trends['name'].head(5).tolist()
+                        df_ts_trends = df_ts_trends[df_ts_trends['entity'].isin(top5_trends)]
+                        if not df_ts_trends.empty:
+                            pivot_trends = df_ts_trends.pivot(index='day', columns='entity', values='cnt').fillna(0).sort_index()
+                            st.markdown('<div class="v-card"><span class="card-title">Top 5 Trends (30 Days)</span>', unsafe_allow_html=True)
+                            st.line_chart(pivot_trends)
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                # Rising / falling + Word Cloud
+                tcol3, tcol4 = st.columns([1, 2])
+                with tcol3:
+                    st.markdown('<div class="v-card"><span class="card-title">Rising / Falling (7d)</span>', unsafe_allow_html=True)
+                    cur_start_trends = end_trends - timedelta(days=7)
+                    prev_start_trends = cur_start_trends - timedelta(days=7)
+                    prev_end_trends = cur_start_trends
+                    
+                    compare_query_trends = '''
+                    SELECT e.name,
+                      SUM(CASE WHEN ie.mention_time >= ? THEN 1 ELSE 0 END) as current_count,
+                      SUM(CASE WHEN ie.mention_time >= ? AND ie.mention_time < ? THEN 1 ELSE 0 END) as prior_count
+                    FROM entities e
+                    JOIN item_entities ie ON e.id = ie.entity_id
+                    GROUP BY e.name
+                    ORDER BY current_count DESC
+                    LIMIT 15
+                    '''
+                    df_comp_trends = pd.read_sql_query(compare_query_trends, conn_trends, params=(cur_start_trends.isoformat(), prev_start_trends.isoformat(), prev_end_trends.isoformat()))
+                    if not df_comp_trends.empty:
+                        for _, row in df_comp_trends.head(10).iterrows():
+                            name = row['name']
+                            curc = int(row.get('current_count') or 0)
+                            prevc = int(row.get('prior_count') or 0)
+                            pct = None
+                            arrow = '→'
+                            if prevc == 0:
+                                pct = None if curc == 0 else 100.0
+                                arrow = '↑' if curc > 0 else '→'
+                            else:
+                                pct = round(((curc - prevc) / prevc) * 100.0, 1)
+                                arrow = '↑' if pct > 0 else ('↓' if pct < 0 else '→')
+                            pct_str = f" ({arrow} {pct}% )" if pct is not None else f" ({arrow})"
+                            st.markdown(f"- **{name}**: {curc}{pct_str}")
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                with tcol4:
+                    # Word cloud for week
+                    week_start_trends = end_trends - timedelta(days=7)
+                    wc_query_trends = '''
+                    SELECT e.name, COUNT(*) as mentions
+                    FROM entities e
+                    JOIN item_entities ie ON e.id = ie.entity_id
+                    WHERE ie.mention_time >= ?
+                    GROUP BY e.name
+                    ORDER BY mentions DESC
+                    LIMIT 50
+                    '''
+                    df_wc_trends = pd.read_sql_query(wc_query_trends, conn_trends, params=(week_start_trends.isoformat(),))
+                    if not df_wc_trends.empty:
+                        try:
+                            from wordcloud import WordCloud
+                            freqs_trends = {r['name']: int(r['mentions']) for _, r in df_wc_trends.iterrows()}
+                            wc_trends = WordCloud(background_color='rgba(0,0,0,0)', mode='RGBA', width=800, height=350).generate_from_frequencies(freqs_trends)
+                            import matplotlib.pyplot as plt
+                            fig_trends, ax_trends = plt.subplots(figsize=(10, 4), facecolor='none')
+                            ax_trends.imshow(wc_trends, interpolation='bilinear')
+                            ax_trends.axis('off')
+                            st.markdown('<div class="v-card"><span class="card-title">Entity Cloud (7 Days)</span>', unsafe_allow_html=True)
+                            st.pyplot(fig_trends)
+                            st.markdown('</div>', unsafe_allow_html=True)
+                        except:
+                            st.markdown('<div class="v-card"><span class="card-title">Top Entities</span>', unsafe_allow_html=True)
+                            st.write(", ".join(df_wc_trends['name'].head(20).tolist()))
+                            st.markdown('</div>', unsafe_allow_html=True)
     
     col_l, col_r = st.columns([2, 1])
     with col_l:
@@ -1670,11 +1936,27 @@ elif "Monitoring" in page:
                 st.write(summary if summary else "No summary available.")
     
     with col_r:
-        st.markdown("""
-        <div class="v-card">
-            <span class="card-title">System Health</span>
-            <div class="v-list-item"><span>LLM API (Provider)</span> <span class="v-badge badge-green">OK Response</span></div>
-            <div class="v-list-item"><span>Vector DB Memory</span> <span class="v-badge badge-amber">N/A</span></div>
-            <div class="v-list-item"><span>Storage Space</span> <span class="v-badge badge-green">Active</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Get dynamic system stats
+        vector_count = "0"
+        try:
+            import chromadb
+            chroma_path = config.get("chroma_path", "./chroma_db")
+            if os.path.exists(chroma_path):
+                client = chromadb.PersistentClient(path=chroma_path)
+                # Try to find the default collection
+                collections = client.list_collections()
+                if collections:
+                    vector_count = sum(c.count() for c in collections)
+                else:
+                    vector_count = "0"
+        except:
+            vector_count = "Offline"
+
+        st.markdown(f"""
+<div class="v-card">
+    <span class="card-title">System Health</span>
+    <div class="v-list-item"><span>LLM Provider</span> <span class="v-badge badge-green">{config.get('provider', 'Groq').upper()}</span></div>
+    <div class="v-list-item"><span>Vector Store</span> <span class="v-badge badge-blue">{vector_count} Vectors</span></div>
+    <div class="v-list-item"><span>Storage Status</span> <span class="v-badge badge-green">Healthy</span></div>
+</div>
+""", unsafe_allow_html=True)

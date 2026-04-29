@@ -36,8 +36,8 @@ feeds_enabled:
   https://news.ycombinator.com/rss: false
   https://techcrunch.com/feed/: false
   https://venturebeat.com/category/ai/feed/: false
-  https://www.artificialintelligence-news.com/feed/: true
-  https://www.bleepingcomputer.com/feed/: false
+  https://www.artificialintelligence-news.com/feed/: false
+  https://www.bleepingcomputer.com/feed/: true
   https://www.theverge.com/rss/index.xml: false
   https://www.wired.com/feed/rss: false
   https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: false

@@ -174,6 +174,19 @@ def run_full_pipeline_with_stored():
         f.write(report)
     print(f"[OK] Report saved to {report_path}")
     
+    # Try to generate a podcast-style audio summary and save alongside the report
+    try:
+        from watcher.agents.podcast_agent import generate_podcast_audio
+        audio_path = str(report_path).replace('.md', '.mp3')
+        print(f"Generating podcast audio for report to {audio_path}...")
+        script = generate_podcast_audio(report, config, audio_path)
+        if script:
+            print(f"[OK] Saved podcast audio: {audio_path}")
+        else:
+            print("Podcast audio generation failed or returned None.")
+    except Exception as e:
+        print(f"Podcast audio generation skipped: {e}")
+    
     # ========================================
     # SUMMARY
     # ========================================

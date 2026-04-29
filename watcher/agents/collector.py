@@ -140,7 +140,30 @@ class CollectorAgent:
 
                     res = self.storage.save_item(item)
                     if not res.get("duplicate", False):
+                        # Save returned DB id on the item for downstream processing
+                        inserted_id = res.get("inserted_id")
+                        item['id'] = inserted_id
                         new_items.append(item)
+
+                        # Try entity extraction asynchronously if LLMs enabled
+                        try:
+                            from watcher.agents.entity_extractor import extract_entities
+                            # use config for provider/model selection
+                            ents = extract_entities((item.get('content') or item.get('summary') or item.get('title') or ''), self.config or config)
+                            if ents:
+                                # Persist entities via storage helper
+                                try:
+                                    if getattr(self.storage, 'save_entities_for_item', None):
+                                        self.storage.save_entities_for_item(inserted_id, ents, mention_time=item.get('fetched_at'))
+                                    else:
+                                        # fallback to module-level saver
+                                        from watcher.agents.entity_extractor import save_entities_to_db
+                                        save_entities_to_db(inserted_id, ents, item.get('fetched_at'))
+                                except Exception:
+                                    pass
+                        except Exception:
+                            # don't block collection on extraction failures
+                            pass
                 else:
                     # No storage: we cannot determine if new since last run — include
                     new_items.append(item)

@@ -328,6 +328,34 @@ def run_pipeline(config):
         filtered_by_topic, config, llm_client
     )
     
+
+    # Step 3.5: Entity Extraction
+    safe_print("Step 3.5: Extracting Entities...")
+    from watcher.agents.entity_extractor import extract_entities, save_entities_to_db
+    import time
+    for t_name, arts in filtered_by_topic.items():
+        for art in arts:
+            # We need the item_id from DB
+            item_id = art.get("id") or art.get("db_id")
+            if not item_id:
+                # If we don't have it, we might need to find it by url
+                url = art.get('url', '') or art.get('link', '')
+                import sqlite3
+                with sqlite3.connect("watcher.db") as conn:
+                    cur = conn.cursor()
+                    cur.execute("SELECT id FROM items WHERE url=?", (url,))
+                    row = cur.fetchone()
+                    if row: item_id = row[0]
+            
+            if item_id:
+                content = art.get("content", "") or art.get("summary", "")
+                if len(content) > 100:
+                    safe_print(f"Extracting entities for article ID {item_id}...")
+                    ents = extract_entities(content, config)
+                    if ents:
+                        save_entities_to_db(item_id, ents, datetime.now().isoformat() + "Z")
+                        time.sleep(1) # delay spacing
+
     # Step 4: Save report
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -338,6 +366,19 @@ def run_pipeline(config):
         f.write(report)
     
     safe_print(f"Report saved: {filename}")
+
+    # Try to generate a podcast-style audio summary and save alongside the report
+    try:
+        from watcher.agents.podcast_agent import generate_podcast_audio
+        audio_path = filename.replace('.md', '.mp3')
+        safe_print(f"Generating podcast audio for report to {audio_path}...")
+        script = generate_podcast_audio(report, config, audio_path)
+        if script:
+            safe_print(f"Saved podcast audio: {audio_path}")
+        else:
+            safe_print("Podcast audio generation failed or returned None.")
+    except Exception as e:
+        safe_print(f"Podcast audio generation skipped: {e}")
     
     # Diagnostic output
     safe_print("\n" + "="*50)

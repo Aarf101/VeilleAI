@@ -319,3 +319,35 @@ h1, h2, h3, h4, h5, h6, .syne, .stat-number {
     transform: translateY(-1px);
     opacity: 0.8;
 }
+
+/* Force global font size on core containers (Streamlit can be opinionated) */
+html, body, .stApp, .main, .block-container {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+}
+
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+}
+
+[data-testid="stSidebar"] div[role="radiogroup"] > label p {
+    font-size: 1.1rem !important;
+}
+
+/* Force global font size on core containers (Streamlit can be opinionated) */
+html, body, .stApp, .main, .block-container {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+}
+
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+}
+
+[data-testid="stSidebar"] div[role="radiogroup"] > label p {
+    font-size: 1.1rem !important;
+}
