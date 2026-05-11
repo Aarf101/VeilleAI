@@ -153,12 +153,17 @@ Paragraph 3: Analysis and implications (consequences and deep trends, 2-3 senten
         title = (art.get('title','') or '')[:150]
         source = art.get('source','') or 'Unknown source'
         date_art = (art.get('published','') or '')[:10]
+        url = get_real_url(art)
+        
         summary = clean_text(
             art.get('summary','') or 
             art.get('description','') or 
             art.get('content','') or ''
         )[:250]
-        recent_devs += f"{i}. {title}\n{summary}... ({source}, {date_art})\n\n"
+        
+        # Add link directly after title
+        link_str = f" [🔗 Source]({url})" if url else ""
+        recent_devs += f"{i}. {title}{link_str}\n{summary}... ({source}, {date_art})\n\n"
     
     return f"""{index}. Technology Watch: {topic}
 

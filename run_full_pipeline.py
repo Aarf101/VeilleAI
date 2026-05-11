@@ -256,6 +256,17 @@ def run_pipeline(config):
     smart_filter = SmartFilter(raw_topics, threshold, config)
     filtered_by_topic = smart_filter.filter_all(articles)
     
+    # Persist matched topics back to DB for monitoring
+    db_path = config.get('sqlite_path', config.get('database', 'watcher.db'))
+    with sqlite3.connect(db_path) as conn_topic:
+        cur_topic = conn_topic.cursor()
+        for topic_name, arts in filtered_by_topic.items():
+            for art in arts:
+                item_id = art.get('id') or art.get('db_id')
+                if item_id:
+                    cur_topic.execute("UPDATE items SET topic = ? WHERE id = ?", (topic_name, item_id))
+        conn_topic.commit()
+
     # Apply recency boost to all matched articles
     for topic in filtered_by_topic:
         filtered_by_topic[topic] = apply_recency_boost(filtered_by_topic[topic], config)
@@ -329,32 +340,41 @@ def run_pipeline(config):
     )
     
 
-    # Step 3.5: Entity Extraction
-    safe_print("Step 3.5: Extracting Entities...")
+    # Step 3.5: Entity Extraction (Now handled during collection or in parallel)
+    safe_print("Step 3.5: Extracting missing Entities...")
     from watcher.agents.entity_extractor import extract_entities, save_entities_to_db
-    import time
-    for t_name, arts in filtered_by_topic.items():
-        for art in arts:
-            # We need the item_id from DB
-            item_id = art.get("id") or art.get("db_id")
-            if not item_id:
-                # If we don't have it, we might need to find it by url
-                url = art.get('url', '') or art.get('link', '')
-                import sqlite3
-                with sqlite3.connect("watcher.db") as conn:
-                    cur = conn.cursor()
-                    cur.execute("SELECT id FROM items WHERE url=?", (url,))
-                    row = cur.fetchone()
-                    if row: item_id = row[0]
+    import concurrent.futures
+    
+    def process_art_entities(art):
+        item_id = art.get("id") or art.get("db_id")
+        if not item_id:
+            url = art.get('url', '') or art.get('link', '')
+            with sqlite3.connect("watcher.db") as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT id FROM items WHERE url=?", (url,))
+                row = cur.fetchone()
+                if row: item_id = row[0]
+        
+        if item_id:
+            # Check if entities already exist
+            with sqlite3.connect("watcher.db") as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT COUNT(*) FROM item_entities WHERE item_id=?", (item_id,))
+                if cur.fetchone()[0] > 0:
+                    return # Already extracted
             
-            if item_id:
-                content = art.get("content", "") or art.get("summary", "")
-                if len(content) > 100:
-                    safe_print(f"Extracting entities for article ID {item_id}...")
-                    ents = extract_entities(content, config)
-                    if ents:
-                        save_entities_to_db(item_id, ents, datetime.now().isoformat() + "Z")
-                        time.sleep(1) # delay spacing
+            content = art.get("content", "") or art.get("summary", "")
+            if len(content) > 100:
+                ents = extract_entities(content, config)
+                if ents:
+                    save_entities_to_db(item_id, ents, datetime.now().isoformat() + "Z")
+
+    all_arts_to_extract = []
+    for arts in filtered_by_topic.values():
+        all_arts_to_extract.extend(arts)
+        
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(process_art_entities, all_arts_to_extract)
 
     # Step 4: Save report
     from datetime import datetime

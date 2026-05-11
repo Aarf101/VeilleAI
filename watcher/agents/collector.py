@@ -196,8 +196,9 @@ class CollectorAgent:
             for future in as_completed(futures):
                 all_rss_entries.extend(future.result())
 
-        for e in all_rss_entries:
-            _process_entry(e)
+        # Process entries in parallel for speed (Transcripts, Entities, Storage)
+        with ThreadPoolExecutor(max_workers=min(10, len(all_rss_entries) or 1)) as entry_executor:
+            entry_executor.map(_process_entry, all_rss_entries)
 
         # Collect APIs
         if config.get("enable_rss_feeds", True):
@@ -272,8 +273,9 @@ class CollectorAgent:
                             except Exception as pe:
                                 logger.warning(f"DuckDuckGo news search failed for {t_name}: {pe}")
 
-                        import time
-                        time.sleep(2)  # Prevent DDG rate limit
+                        # Small delay to respect rate limits if many topics
+                        if len(topics) > 3:
+                            time.sleep(0.5)
             except Exception as e:
                 logger.error(f"DuckDuckGo search failed: {e}")
 

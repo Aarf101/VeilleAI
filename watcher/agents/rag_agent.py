@@ -94,7 +94,9 @@ def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 5) 
             
         # 4. LangChain Prompt Template
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an intelligent technical assistant for VeilleAI. You use the provided context to answer user questions.\nContext:\n{context}"),
+            ("system", "You are an intelligent technical assistant for VeilleAI. You use the provided context to answer user questions.\n"
+                       "IMPORTANT: For every piece of information, news, or development you mention, you MUST explicitly include its publication date as found in the context.\n"
+                       "Context:\n{context}"),
             ("human", "Question: {question}")
         ])
 

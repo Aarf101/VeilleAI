@@ -1,8 +1,8 @@
 chroma_path: ./chroma_db
-enable_autonomous_search: false
+enable_autonomous_search: true
 enable_rss_feeds: true
 enable_trending_weighting: false
-enable_youtube_transcripts: false
+enable_youtube_transcripts: true
 feeds:
 - https://www.artificialintelligence-news.com/feed/
 - https://huggingface.co/blog/feed.xml
@@ -23,23 +23,26 @@ feeds:
 - https://feeds.arstechnica.com/arstechnica/index
 - https://www.wired.com/feed/rss
 - https://venturebeat.com/category/ai/feed/
+- https://openai.com/news/rss
+- https://www.technologyreview.com/feed/
+- http://feeds.arstechnica.com/arstechnica/index
 feeds_enabled:
-  https://arxiv.org/rss/cs.AI: false
+  https://arxiv.org/rss/cs.AI: true
   https://coindesk.com/arc/outboundfeeds/rss/: false
-  https://cointelegraph.com/rss: false
+  https://cointelegraph.com/rss: true
   https://developer.nvidia.com/blog/feed: false
   https://feeds.arstechnica.com/arstechnica/index: false
   https://feeds.feedburner.com/TheHackersNews: false
   https://feeds.feedburner.com/venturebeat/SZY: false
   https://huggingface.co/blog/feed.xml: false
-  https://krebsonsecurity.com/feed/: false
+  https://krebsonsecurity.com/feed/: true
   https://news.ycombinator.com/rss: false
-  https://techcrunch.com/feed/: false
+  https://techcrunch.com/feed/: true
   https://venturebeat.com/category/ai/feed/: false
-  https://www.artificialintelligence-news.com/feed/: false
+  https://www.artificialintelligence-news.com/feed/: true
   https://www.bleepingcomputer.com/feed/: true
-  https://www.theverge.com/rss/index.xml: false
-  https://www.wired.com/feed/rss: false
+  https://www.theverge.com/rss/index.xml: true
+  https://www.wired.com/feed/rss: true
   https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: false
   https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA: false
   https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw: false
@@ -72,7 +75,7 @@ news_language: 🇫🇷 Français
 ollama_model: llama3
 provider: groq
 recency_boost: true
-relevance_threshold: 0.5
+relevance_threshold: 0.2
 schedule_fixed_hours:
 - '20:55'
 schedule_interval_minutes: 5

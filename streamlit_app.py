@@ -441,13 +441,14 @@ with st.sidebar:
     page = st.radio(
         "",
         [
-            "⊞  Dashboard",
-            "▶  Run Pipeline",
-            "⏱  Scheduler",
-            "🏷  Topics",
-            "🗄  Data Sources",
-            "⚙  Advanced",
-            "📊  Monitoring"
+            "Dashboard",
+            "Run Pipeline",
+            "Scheduler",
+            "Topics",
+            "Data Sources",
+            "Monitoring",
+            "Chat",
+            "Advanced"
         ],
         label_visibility="collapsed"
     )
@@ -567,20 +568,22 @@ if "Dashboard" in page:
     
     col_l, col_r = st.columns([2, 1])
     with col_l:
-        st.markdown("""
-<div class="v-card">
-    <span class="card-title">Monitored Topics</span>
-    <div class="topic-container">
-""", unsafe_allow_html=True)
+        st.markdown('<h3 class="section-header">Monitored Topics</h3>', unsafe_allow_html=True)
         # Render topics dynamically from disk
         saved_topics = []
         if CONFIG_PATH.exists():
             try: saved_topics = yaml.safe_load(open(CONFIG_PATH)).get("topics", [])
             except: pass
+        
+        tags_html = ""
         for t in saved_topics:
             topic_name = t['name'] if isinstance(t, dict) else t
-            st.markdown(f'<span class="topic-tag">{topic_name}</span>', unsafe_allow_html=True)
-        st.markdown('</div></div>', unsafe_allow_html=True)
+            tags_html += f'<span class="topic-tag">{topic_name}</span>'
+        
+        if tags_html:
+            st.markdown(f'<div class="topic-container">{tags_html}</div>', unsafe_allow_html=True)
+        else:
+            st.info("No topics configured.")
         
         # System status checks
         db_path_check = _resolve_db_path()
@@ -611,8 +614,9 @@ if "Dashboard" in page:
 """, unsafe_allow_html=True)
         
     with col_r:
-        st.markdown('<div class="v-card"><span class="card-title">Quick Actions</span>', unsafe_allow_html=True)
-        if st.button("▶ Run Full Pipeline", type="primary", use_container_width=True):
+        st.markdown('<h3 class="section-header">Scheduler Status</h3>', unsafe_allow_html=True)
+        st.markdown('<div class="v-card">', unsafe_allow_html=True)
+        if st.button("Run Full Pipeline", type="primary", use_container_width=True):
             with st.spinner("Running pipeline..."):
                 import subprocess
                 
@@ -760,25 +764,11 @@ elif "Run Pipeline" in page:
     prov_ok = available_providers.get(active_prov, {}).get("available", False)
     
     if prov_ok:
-        
         # Determine model capabilities locally since backend isn't executing here.
-        speed_bar = "████████░░ Fast"
-        quality_bar = "███████░░░ Good"
-        cost_bar = "Free"
-        
-        if "gemini" in active_model:
-            speed_bar, quality_bar = "█████████░ Very Fast", "████████░░ High"
-        if "llama" in active_model and "70b" not in active_model:
-             speed_bar, quality_bar = "██████████ Very Fast", "█████░░░░░ Moderate"
-             
         st.markdown(f"""
 <div style="background:rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
     <strong style="color:#10b981;">ACTIVE PROVIDER</strong><br/><br/>
-    ✓ {active_prov} · {active_model}<br/>
-    API Key found — ready to run<br/><br/>
-    Speed:   {speed_bar}<br/>
-    Quality: {quality_bar}<br/>
-    Cost:    {cost_bar}
+    API Key found — ready to run
 </div>
 """, unsafe_allow_html=True)
         can_run = True
@@ -797,7 +787,7 @@ elif "Run Pipeline" in page:
         for p, d in available_providers.items():
             if d['available'] and p != active_prov:
                 with cols[col_idx % len(cols)]:
-                    if st.button(f"✓ Switch to {p}", key=f"switch_to_{p}", use_container_width=True):
+                    if st.button(f"Switch to {p}", key=f"switch_to_{p}", use_container_width=True):
                         st.session_state.config['provider'] = p
                         st.session_state.config['model'] = get_best_model(p)
                         save_config(st.session_state.config)
@@ -810,22 +800,22 @@ elif "Run Pipeline" in page:
     chk1, chk2, chk3, chk4 = st.columns(4)
     with chk1: 
         if can_run:
-            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">✓ API Key Valid</div>', unsafe_allow_html=True)
+            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">API Key Valid</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #ef4444; color:#f87171;">✗ API Key Missing</div>', unsafe_allow_html=True)
-    with chk2: st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">✓ Database Writable</div>', unsafe_allow_html=True)
+            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #ef4444; color:#f87171;">API Key Missing</div>', unsafe_allow_html=True)
+    with chk2: st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">Database Writable</div>', unsafe_allow_html=True)
     
     with chk3: 
         if len(config.get('feeds', [])) > 0:
-            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">✓ RSS Feeds Online</div>', unsafe_allow_html=True)
+            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">RSS Feeds Online</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #ef4444; color:#f87171;">✗ No RSS Feeds</div>', unsafe_allow_html=True)
+            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #ef4444; color:#f87171;">No RSS Feeds</div>', unsafe_allow_html=True)
             
     with chk4: 
         if len(config.get('topics', [])) > 0:
-            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">✓ Topics Parsed</div>', unsafe_allow_html=True)
+            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #10b981; color:#34d399;">Topics Parsed</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #ef4444; color:#f87171;">✗ No Topics</div>', unsafe_allow_html=True)
+            st.markdown('<div class="v-alert" style="background:transparent; border:1px solid #ef4444; color:#f87171;">No Topics</div>', unsafe_allow_html=True)
     
     st.markdown('<span class="card-title mt-2">Current Topics</span>', unsafe_allow_html=True)
     active_topics = []
@@ -836,7 +826,7 @@ elif "Run Pipeline" in page:
         topic_tags = "".join([f"<span class=topic-tag>{t['name'] if isinstance(t, dict) else t}</span>" for t in active_topics])
         st.markdown(f'<div class="topic-container" style="margin-bottom:1rem;">{topic_tags}</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="v-alert alert-warn">⚠ No topics configured — your report may not be focused. Go to Topics page to add some.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="v-alert alert-warn">No topics configured — your report may not be focused. Go to Topics page to add some.</div>', unsafe_allow_html=True)
     
     st.markdown(f"""
 <div style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:8px; margin-bottom:1rem; font-size:0.85rem; color:#9ca3af;">
@@ -1315,7 +1305,8 @@ elif "Topics" in page:
                 
     st.markdown("<hr/>", unsafe_allow_html=True)
     
-    st.markdown('<div class="v-card"><span class="card-title">ADD NEW TOPIC</span>', unsafe_allow_html=True)
+    st.markdown('<h3 class="section-header">Topic Configuration</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="v-card">', unsafe_allow_html=True)
     
     topic_name = st.text_input("Topic name", value=st.session_state.new_topic_name, placeholder="e.g. Artificial Intelligence")
     topic_description = st.text_area("Keywords / Description", value=st.session_state.new_topic_description, placeholder="Auto-generate or type keywords...", height=100)
@@ -1367,10 +1358,10 @@ elif "Data Sources" in page:
     is_yt = st.session_state.config.get("enable_youtube_transcripts", False)
     is_hist = st.session_state.config.get("include_historical", True)
     
-    new_rss = st.checkbox("📰 Standard RSS Feeds & APIs", value=is_rss, help="Collect articles from the explicit URLs you added below.")
-    new_auto = st.checkbox("🌐 Autonomous Web Search (News)", value=is_auto, help="Search the web autonomously for news about your Topics.")
-    new_yt = st.checkbox("📺 Autonomous YouTube Scraping", value=is_yt, help="Search YouTube autonomously for videos about your Topics.")
-    new_hist = st.checkbox("🗄️ Include Historical Database Articles", value=is_hist, help="Allow the AI to pull relevant older articles you previously scraped into the new report.")
+    new_rss = st.checkbox("Standard RSS Feeds & APIs", value=is_rss, help="Collect articles from the explicit URLs you added below.")
+    new_auto = st.checkbox("Autonomous Web Search (News)", value=is_auto, help="Search the web autonomously for news about your Topics.")
+    new_yt = st.checkbox("Autonomous YouTube Scraping", value=is_yt, help="Search YouTube autonomously for videos about your Topics.")
+    new_hist = st.checkbox("Include Historical Database Articles", value=is_hist, help="Allow the AI to pull relevant older articles you previously scraped into the new report.")
     
     if new_rss != is_rss or new_auto != is_auto or new_yt != is_yt or new_hist != is_hist:
         st.session_state.config["enable_rss_feeds"] = new_rss
@@ -1501,8 +1492,39 @@ elif "Data Sources" in page:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+elif "Chat" in page:
+    st.markdown('<h3 class="section-header">Ask your Data</h3>', unsafe_allow_html=True)
+    
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # React to user input
+    if prompt := st.chat_input("Ask a question about your intelligence data..."):
+        # Display user message in chat message container
+        st.chat_message("user").markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        with st.chat_message("assistant"):
+            with st.spinner("Searching knowledge base..."):
+                try:
+                    from watcher.agents.rag_agent import query_rag
+                    db_path = config.get('sqlite_path', 'watcher.db')
+                    response = query_rag(prompt, config, db_path)
+                    st.markdown(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                except Exception as e:
+                    st.error(f"Chat Error: {e}")
+
 elif "Advanced" in page:
-    st.markdown('<div class="v-card"><span class="card-title">Advanced Settings</span>', unsafe_allow_html=True)
+    st.markdown('<h3 class="section-header">Advanced Settings</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="v-card">', unsafe_allow_html=True)
     
     # 1. ⚠️ WARNINGS
     current_threshold = config.get("relevance_threshold", 0.30)
@@ -1543,9 +1565,9 @@ elif "Advanced" in page:
         active_label = " (Active)" if is_active else ""
         
         with c1:
-            icon = "✓" if details['available'] else "✗"
+            icon = "" if details['available'] else ""
             color = "#10b981" if details['available'] else "#ef4444"
-            st.markdown(f'<span style="color:{color}; font-weight:bold;">{icon} {prov}{active_label}</span>', unsafe_allow_html=True)
+            st.markdown(f'<span style="color:{color}; font-weight:bold;">{prov}{active_label}</span>', unsafe_allow_html=True)
         with c2:
             st.markdown(f'<span style="color:#9ca3af; font-size:0.9rem;">{details["reason"]}</span>', unsafe_allow_html=True)
         with c3:
@@ -1599,7 +1621,7 @@ elif "Advanced" in page:
         else:
             st.markdown('Status: <span class="v-badge badge-red" style="background:#ef4444; color:white;">NOT RUNNING</span>', unsafe_allow_html=True)
     with col_link:
-        st.markdown('<a href="https://ollama.com/download" target="_blank" style="text-decoration:none; color:#60a5fa; font-size:0.9rem;">Download Ollama ↗</a>', unsafe_allow_html=True)
+        st.markdown('<a href="https://ollama.com/download" target="_blank" style="text-decoration:none; color:#60a5fa; font-size:0.9rem;">Download Ollama</a>', unsafe_allow_html=True)
     
     ollama_model = st.text_input("Ollama Model Name", value=config.get('ollama_model', 'llama3'), key="ollama_model_input")
     if ollama_model != config.get('ollama_model'):
@@ -1774,7 +1796,8 @@ elif "Monitoring" in page:
         latest = 'N/A'
         recent_articles = []
 
-    st.markdown('<div class="v-card"><span class="card-title">Live Metrics</span>', unsafe_allow_html=True)
+    st.markdown('<h3 class="section-header">Live Metrics</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="v-card">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.metric("Total Articles DB", str(total_articles))
     with c2: st.metric("Unique Sources", str(unique_sources))
@@ -1796,16 +1819,18 @@ elif "Monitoring" in page:
             
             scol1, scol2 = st.columns([2, 1])
             with scol1:
-                st.markdown('<div class="v-card"><span class="card-title">Collection Activity (Articles/Day)</span>', unsafe_allow_html=True)
+                st.markdown('<h3 class="section-header">Collection Activity (Articles/Day)</h3>', unsafe_allow_html=True)
+                st.markdown('<div class="v-card">', unsafe_allow_html=True)
                 if not df_act.empty:
                     df_act = df_act.sort_values('day')
-                    st.line_chart(df_act.set_index('day'))
+                    st.bar_chart(df_act.set_index('day'))
                 else:
                     st.info("No activity data yet.")
                 st.markdown('</div>', unsafe_allow_html=True)
                 
             with scol2:
-                st.markdown('<div class="v-card"><span class="card-title">Top 10 Sources</span>', unsafe_allow_html=True)
+                st.markdown('<h3 class="section-header">Top 10 Sources</h3>', unsafe_allow_html=True)
+                st.markdown('<div class="v-card">', unsafe_allow_html=True)
                 if not df_src.empty:
                     # Simplified bar chart as pie fallback
                     st.bar_chart(df_src.set_index('source'))
@@ -1821,114 +1846,113 @@ elif "Monitoring" in page:
         import pandas as pd
         with sqlite3.connect(db_path_trends) as conn_trends:
             # Top entities overall
-            query_trends = '''
-            SELECT e.name, count(ie.item_id) as mentions
+            query_topic = '''
+            SELECT topic, COUNT(*) as count 
+            FROM items 
+            WHERE topic IS NOT NULL 
+              AND fetched_at >= date('now', '-7 days')
+            GROUP BY topic 
+            ORDER BY count DESC
+            '''
+            df_topic = pd.read_sql_query(query_topic, conn_trends)
+
+            tcol1, tcol2 = st.columns(2)
+            with tcol1:
+                st.markdown('<h3 class="section-header">Topic Coverage (7 Days)</h3>', unsafe_allow_html=True)
+                st.markdown('<div class="v-card">', unsafe_allow_html=True)
+                if not df_topic.empty:
+                    st.bar_chart(df_topic.set_index("topic"))
+                else:
+                    st.info("No topic data yet. Run the pipeline to populate.")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # Time series for top 5 entities over last 30 days
+            from datetime import datetime, timedelta
+            end_trends = datetime.utcnow()
+            start_trends = end_trends - timedelta(days=30)
+
+            # Re-fetch top entities for trends since df_trends was replaced
+            query_ent = 'SELECT e.name FROM entities e JOIN item_entities ie ON e.id = ie.entity_id GROUP BY e.name ORDER BY COUNT(*) DESC LIMIT 5'
+            top5_trends = [r[0] for r in conn_trends.execute(query_ent).fetchall()]
+
+            ts_query_trends = '''
+            SELECT e.name as entity, date(ie.mention_time) as day, COUNT(*) as cnt
             FROM entities e
             JOIN item_entities ie ON e.id = ie.entity_id
-            GROUP BY e.name
-            ORDER BY mentions DESC
-            LIMIT 15
+            WHERE ie.mention_time >= ?
+            GROUP BY e.name, day
             '''
-            df_trends = pd.read_sql_query(query_trends, conn_trends)
+            df_ts_trends = pd.read_sql_query(ts_query_trends, conn_trends, params=(start_trends.isoformat(),))
+            
+            with tcol2:
+                if not df_ts_trends.empty and top5_trends:
+                    df_ts_trends = df_ts_trends[df_ts_trends['entity'].isin(top5_trends)]
+                    if not df_ts_trends.empty:
+                        pivot_trends = df_ts_trends.pivot(index='day', columns='entity', values='cnt').fillna(0).sort_index()
+                        st.markdown('<h3 class="section-header">Top 5 Trends (30 Days)</h3>', unsafe_allow_html=True)
+                        st.markdown('<div class="v-card">', unsafe_allow_html=True)
+                        st.bar_chart(pivot_trends)
+                        st.markdown('</div>', unsafe_allow_html=True)
 
-            if not df_trends.empty:
-                tcol1, tcol2 = st.columns(2)
-                with tcol1:
-                    st.markdown('<div class="v-card"><span class="card-title">Most Mentioned (All Time)</span>', unsafe_allow_html=True)
-                    st.bar_chart(df_trends.set_index("name"))
-                    st.markdown('</div>', unsafe_allow_html=True)
+            # Rising / falling + Word Cloud
+            tcol3, tcol4 = st.columns([1, 2])
+            with tcol3:
+                st.markdown('<h3 class="section-header">Rising / Falling (7d)</h3>', unsafe_allow_html=True)
+                st.markdown('<div class="v-card">', unsafe_allow_html=True)
+                cur_start_trends = end_trends - timedelta(days=7)
+                prev_start_trends = cur_start_trends - timedelta(days=7)
+                prev_end_trends = cur_start_trends
+                
+                compare_query_trends = '''
+                SELECT e.name,
+                  SUM(CASE WHEN ie.mention_time >= ? THEN 1 ELSE 0 END) as current_count,
+                  SUM(CASE WHEN ie.mention_time >= ? AND ie.mention_time < ? THEN 1 ELSE 0 END) as prior_count
+                FROM entities e
+                JOIN item_entities ie ON e.id = ie.entity_id
+                GROUP BY e.name
+                ORDER BY current_count DESC
+                LIMIT 15
+                '''
+                df_comp_trends = pd.read_sql_query(compare_query_trends, conn_trends, params=(cur_start_trends.isoformat(), prev_start_trends.isoformat(), prev_end_trends.isoformat()))
+                if not df_comp_trends.empty:
+                    for _, row in df_comp_trends.head(10).iterrows():
+                        name = row['name']
+                        curc = int(row.get('current_count') or 0)
+                        prevc = int(row.get('prior_count') or 0)
+                        pct = None
+                        arrow = '→'
+                        if prevc == 0:
+                            pct = None if curc == 0 else 100.0
+                            arrow = '↑' if curc > 0 else '→'
+                        else:
+                            pct = round(((curc - prevc) / prevc) * 100.0, 1)
+                            arrow = '↑' if pct > 0 else ('↓' if pct < 0 else '→')
+                        pct_str = f" ({arrow} {pct}% )" if pct is not None else f" ({arrow})"
+                        st.markdown(f"- **{name}**: {curc}{pct_str}")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-                # Time series for top 5 entities over last 30 days
-                from datetime import datetime, timedelta
-                end_trends = datetime.utcnow()
-                start_trends = end_trends - timedelta(days=30)
-                ts_query_trends = '''
-                SELECT e.name as entity, date(ie.mention_time) as day, COUNT(*) as cnt
+            with tcol4:
+                # Word cloud for week
+                week_start_trends = end_trends - timedelta(days=7)
+                wc_query_trends = '''
+                SELECT e.name, COUNT(*) as mentions
                 FROM entities e
                 JOIN item_entities ie ON e.id = ie.entity_id
                 WHERE ie.mention_time >= ?
-                GROUP BY e.name, day
+                GROUP BY e.name
+                ORDER BY mentions DESC
+                LIMIT 50
                 '''
-                df_ts_trends = pd.read_sql_query(ts_query_trends, conn_trends, params=(start_trends.isoformat(),))
-                with tcol2:
-                    if not df_ts_trends.empty:
-                        top5_trends = df_trends['name'].head(5).tolist()
-                        df_ts_trends = df_ts_trends[df_ts_trends['entity'].isin(top5_trends)]
-                        if not df_ts_trends.empty:
-                            pivot_trends = df_ts_trends.pivot(index='day', columns='entity', values='cnt').fillna(0).sort_index()
-                            st.markdown('<div class="v-card"><span class="card-title">Top 5 Trends (30 Days)</span>', unsafe_allow_html=True)
-                            st.line_chart(pivot_trends)
-                            st.markdown('</div>', unsafe_allow_html=True)
-
-                # Rising / falling + Word Cloud
-                tcol3, tcol4 = st.columns([1, 2])
-                with tcol3:
-                    st.markdown('<div class="v-card"><span class="card-title">Rising / Falling (7d)</span>', unsafe_allow_html=True)
-                    cur_start_trends = end_trends - timedelta(days=7)
-                    prev_start_trends = cur_start_trends - timedelta(days=7)
-                    prev_end_trends = cur_start_trends
-                    
-                    compare_query_trends = '''
-                    SELECT e.name,
-                      SUM(CASE WHEN ie.mention_time >= ? THEN 1 ELSE 0 END) as current_count,
-                      SUM(CASE WHEN ie.mention_time >= ? AND ie.mention_time < ? THEN 1 ELSE 0 END) as prior_count
-                    FROM entities e
-                    JOIN item_entities ie ON e.id = ie.entity_id
-                    GROUP BY e.name
-                    ORDER BY current_count DESC
-                    LIMIT 15
-                    '''
-                    df_comp_trends = pd.read_sql_query(compare_query_trends, conn_trends, params=(cur_start_trends.isoformat(), prev_start_trends.isoformat(), prev_end_trends.isoformat()))
-                    if not df_comp_trends.empty:
-                        for _, row in df_comp_trends.head(10).iterrows():
-                            name = row['name']
-                            curc = int(row.get('current_count') or 0)
-                            prevc = int(row.get('prior_count') or 0)
-                            pct = None
-                            arrow = '→'
-                            if prevc == 0:
-                                pct = None if curc == 0 else 100.0
-                                arrow = '↑' if curc > 0 else '→'
-                            else:
-                                pct = round(((curc - prevc) / prevc) * 100.0, 1)
-                                arrow = '↑' if pct > 0 else ('↓' if pct < 0 else '→')
-                            pct_str = f" ({arrow} {pct}% )" if pct is not None else f" ({arrow})"
-                            st.markdown(f"- **{name}**: {curc}{pct_str}")
+                df_wc_trends = pd.read_sql_query(wc_query_trends, conn_trends, params=(week_start_trends.isoformat(),))
+                if not df_wc_trends.empty:
+                    st.markdown('<h3 class="section-header">Weekly Entity Insights</h3>', unsafe_allow_html=True)
+                    st.markdown('<div class="v-card">', unsafe_allow_html=True)
+                    st.bar_chart(df_wc_trends.head(15).set_index("name"))
                     st.markdown('</div>', unsafe_allow_html=True)
-
-                with tcol4:
-                    # Word cloud for week
-                    week_start_trends = end_trends - timedelta(days=7)
-                    wc_query_trends = '''
-                    SELECT e.name, COUNT(*) as mentions
-                    FROM entities e
-                    JOIN item_entities ie ON e.id = ie.entity_id
-                    WHERE ie.mention_time >= ?
-                    GROUP BY e.name
-                    ORDER BY mentions DESC
-                    LIMIT 50
-                    '''
-                    df_wc_trends = pd.read_sql_query(wc_query_trends, conn_trends, params=(week_start_trends.isoformat(),))
-                    if not df_wc_trends.empty:
-                        try:
-                            from wordcloud import WordCloud
-                            freqs_trends = {r['name']: int(r['mentions']) for _, r in df_wc_trends.iterrows()}
-                            wc_trends = WordCloud(background_color='rgba(0,0,0,0)', mode='RGBA', width=800, height=350).generate_from_frequencies(freqs_trends)
-                            import matplotlib.pyplot as plt
-                            fig_trends, ax_trends = plt.subplots(figsize=(10, 4), facecolor='none')
-                            ax_trends.imshow(wc_trends, interpolation='bilinear')
-                            ax_trends.axis('off')
-                            st.markdown('<div class="v-card"><span class="card-title">Entity Cloud (7 Days)</span>', unsafe_allow_html=True)
-                            st.pyplot(fig_trends)
-                            st.markdown('</div>', unsafe_allow_html=True)
-                        except:
-                            st.markdown('<div class="v-card"><span class="card-title">Top Entities</span>', unsafe_allow_html=True)
-                            st.write(", ".join(df_wc_trends['name'].head(20).tolist()))
-                            st.markdown('</div>', unsafe_allow_html=True)
     
     col_l, col_r = st.columns([2, 1])
     with col_l:
-        st.markdown('<div class="v-card"><span class="card-title">Recent Articles</span></div>', unsafe_allow_html=True)
+        st.markdown('<h3 class="section-header">Recent Articles</h3>', unsafe_allow_html=True)
         if not recent_articles:
             st.info("No articles found in database.")
         for title, summary, source, pub in recent_articles:
