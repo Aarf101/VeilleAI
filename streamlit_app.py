@@ -7,6 +7,11 @@ import urllib.parse
 from pathlib import Path
 import tempfile
 import threading
+import sys
+from datetime import datetime
+
+from watcher.storage.store import Storage
+from watcher.utils.doc_processor import process_uploaded_file
 
 @st.cache_data(show_spinner=False)
 def generate_pdf_bytes(md_str):
@@ -1390,6 +1395,54 @@ elif "Data Sources" in page:
                 st.warning("Feed already exists.")
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # --- NEW: DOCUMENT INGESTION ---
+    st.markdown('<div class="v-card"><span class="card-title">DOCUMENT INGESTION</span>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.85rem; color:#9ca3af; margin-bottom:1rem;">Upload local documents to add them to your private intelligence base.</div>', unsafe_allow_html=True)
+    
+    # Let user pick a topic for the documents
+    topic_names = [t['name'] if isinstance(t, dict) else t for t in st.session_state.config.get('topics', [])]
+    selected_topic = st.selectbox("Assign to Topic", options=["General"] + topic_names, help="This determines which section of the report the document will appear in.")
+    
+    uploaded_files = st.file_uploader("Upload PDF, DOCX, or TXT", type=["pdf", "docx", "txt"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        if st.button("Process & Index Documents", type="primary"):
+            storage = Storage(db_path=st.session_state.config.get('sqlite_path', 'watcher.db'))
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            for i, uploaded_file in enumerate(uploaded_files):
+                try:
+                    status_text.text(f"Processing {uploaded_file.name}...")
+                    text = process_uploaded_file(uploaded_file)
+                    
+                    if text:
+                        # Save to DB as a manual entry
+                        import email.utils
+                        item = {
+                            "title": uploaded_file.name,
+                            "url": f"local://{uploaded_file.name}",
+                            "summary": text[:500] + "...",
+                            "content": text,
+                            "source": "Manual Upload",
+                            "published": email.utils.formatdate(usegmt=True),
+                            "matched_topic": selected_topic 
+                        }
+                        storage.save_item(item)
+                        status_text.text(f"✅ Indexed {uploaded_file.name}")
+                    else:
+                        st.warning(f"Could not extract text from {uploaded_file.name}")
+                        
+                except Exception as e:
+                    st.error(f"Error processing {uploaded_file.name}: {e}")
+                
+                progress_bar.progress((i + 1) / len(uploaded_files))
+            
+            st.success(f"All documents indexed as '{selected_topic}'!")
+            time.sleep(2)
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('<div class="v-card"><span class="card-title">PRESETS</span>', unsafe_allow_html=True)
     p1, p2, p3 = st.columns(3)
     with p1:
@@ -1447,47 +1500,92 @@ elif "Data Sources" in page:
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="v-card"><span class="card-title">ALL FEEDS (toggle + weight)</span>', unsafe_allow_html=True)
+    st.markdown('<div class="v-card"><span class="card-title">ALL FEEDS (toggle + weight + topic)</span>', unsafe_allow_html=True)
     
     feeds_enabled = st.session_state.config.get('feeds_enabled', {})
     feeds_weight = st.session_state.config.get('feeds_weight', {})
+    feeds_topics = st.session_state.config.get('feeds_topics', {})
+    
+    # Topic names for dropdown
+    topic_names = ["Auto"] + [t['name'] if isinstance(t, dict) else t for t in st.session_state.config.get('topics', [])]
     
     changed = False
-    for i, f in enumerate(st.session_state.config.get('feeds', [])):
-        c_toggle, c_url, c_badge, c_weight, c_del = st.columns([1, 4, 1, 2, 1])
+    
+    # --- TOGGLE ALL BUTTONS ---
+    t_on, t_off, _ = st.columns([1.5, 1.5, 5])
+    with t_on:
+        if st.button("Enable All", key="btn_enable_all", use_container_width=True):
+            import hashlib
+            for f in st.session_state.config.get('feeds', []):
+                feeds_enabled[f] = True
+                # Force update the widget state directly
+                f_hash = hashlib.md5(f.encode()).hexdigest()[:8]
+                st.session_state[f"tog_{f_hash}"] = True
+            st.session_state.config['feeds_enabled'] = feeds_enabled
+            save_config(st.session_state.config)
+            st.rerun()
+    with t_off:
+        if st.button("Disable All", key="btn_disable_all", use_container_width=True):
+            import hashlib
+            for f in st.session_state.config.get('feeds', []):
+                feeds_enabled[f] = False
+                # Force update the widget state directly
+                f_hash = hashlib.md5(f.encode()).hexdigest()[:8]
+                st.session_state[f"tog_{f_hash}"] = False
+            st.session_state.config['feeds_enabled'] = feeds_enabled
+            save_config(st.session_state.config)
+            st.rerun()
+    
+    st.markdown('<div style="margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05);"></div>', unsafe_allow_html=True)
+
+    import hashlib
+    for f in st.session_state.config.get('feeds', []):
+        f_hash = hashlib.md5(f.encode()).hexdigest()[:8]
+        c_toggle, c_url, c_badge, c_weight, c_topic, c_del = st.columns([1, 4, 1, 2, 2, 1])
         
         with c_toggle:
             is_on = feeds_enabled.get(f, True)
-            new_on = st.toggle("", value=is_on, key=f"toggle_f_{i}", label_visibility="collapsed")
+            new_on = st.toggle("", value=is_on, key=f"tog_{f_hash}", label_visibility="collapsed")
             if new_on != is_on:
                 feeds_enabled[f] = new_on
                 changed = True
                 
         with c_url:
-            st.markdown(f'<div style="font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-top:8px;">{f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-top:10px; color:#e5e7eb;">{f}</div>', unsafe_allow_html=True)
             
         with c_badge:
             badge = "YT" if "youtube.com" in f else "RSS"
-            color = "#ff0000" if badge == "YT" else "#3b82f6"
-            st.markdown(f'<span style="background:{color}; color:white; padding:2px 6px; border-radius:4px; font-size:0.7rem;">{badge}</span>', unsafe_allow_html=True)
+            color = "#ef4444" if badge == "YT" else "#3b82f6"
+            st.markdown(f'<div style="padding-top:8px;"><span style="background:{color}; color:white; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:bold;">{badge}</span></div>', unsafe_allow_html=True)
             
         with c_weight:
             current_w = float(feeds_weight.get(f, 1.0))
-            new_w = st.slider("", 0.1, 2.0, current_w, 0.1, key=f"weight_f_{i}", label_visibility="collapsed")
+            new_w = st.slider("", 0.1, 2.0, current_w, 0.1, key=f"wgt_{f_hash}", label_visibility="collapsed")
             if new_w != current_w:
                 feeds_weight[f] = new_w
                 changed = True
+        
+        with c_topic:
+            current_t = feeds_topics.get(f, "Auto")
+            if current_t not in topic_names: current_t = "Auto"
+            new_t = st.selectbox("", options=topic_names, index=topic_names.index(current_t), key=f"tpc_{f_hash}", label_visibility="collapsed")
+            if new_t != current_t:
+                feeds_topics[f] = new_t
+                changed = True
                 
         with c_del:
-            if st.button("✕", key=f"del_feed_{i}"):
-                st.session_state.config['feeds'].pop(i)
+            if st.button("✕", key=f"del_{f_hash}", help="Delete this feed"):
+                st.session_state.config['feeds'].remove(f)
                 feeds_enabled.pop(f, None)
                 feeds_weight.pop(f, None)
+                feeds_topics.pop(f, None)
                 changed = True
+                st.rerun()
                 
     if changed:
         st.session_state.config['feeds_enabled'] = feeds_enabled
         st.session_state.config['feeds_weight'] = feeds_weight
+        st.session_state.config['feeds_topics'] = feeds_topics
         save_config(st.session_state.config)
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -1516,7 +1614,8 @@ elif "Chat" in page:
                 try:
                     from watcher.agents.rag_agent import query_rag
                     db_path = config.get('sqlite_path', 'watcher.db')
-                    response = query_rag(prompt, config, db_path)
+                    # Pass the history (excluding the current user prompt which is already in session_state)
+                    response = query_rag(prompt, config, db_path, history=st.session_state.messages[:-1])
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 except Exception as e:

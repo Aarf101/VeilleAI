@@ -71,14 +71,14 @@ def get_recent_articles_from_db(config, days=7):
         c = conn.cursor()
         c.execute("""
             SELECT title, url, 
-                   published, summary, source
+                   published, summary, source, content, topic
             FROM items 
-            WHERE published >= date('now', '-7 days')
-            OR published >= datetime('now', '-7 days')
+            WHERE published >= date('now', '-30 days')
+            OR published >= datetime('now', '-30 days')
             OR published IS NULL
             OR published = ''
             ORDER BY id DESC
-            LIMIT 200
+            LIMIT 500
         """)
         rows = c.fetchall()
         conn.close()
@@ -91,6 +91,9 @@ def get_recent_articles_from_db(config, days=7):
                 'published': row[2] or '',
                 'summary':   row[3] or '',
                 'source':    row[4] or '',
+                'content':   row[5] or '',
+                'topic':     row[6] or '',
+                'skip_filter': True if row[4] == "Manual Upload" else False # Trust manual uploads
             })
         safe_print(f"DB: {len(articles)} recent articles")
         return articles
@@ -141,13 +144,11 @@ def collect_all_feeds(config):
     
     pipeline_mode = os.environ.get("PIPELINE_MODE", "Keep existing")
     if pipeline_mode == "Fresh start":
-        safe_print("Mode 'Fresh start': clearing database to fetch all articles...")
+        safe_print("Mode 'Fresh start': clearing both database and AI vector store to fetch all articles...")
         try:
-            cur = storage.conn.cursor()
-            cur.execute("DELETE FROM items")
-            storage.conn.commit()
+            storage.wipe_all()
         except Exception as e:
-            safe_print(f"Error clearing db: {e}")
+            safe_print(f"Error clearing storage: {e}")
     elif pipeline_mode == "Clear old >7 days":
         safe_print("Mode 'Clear old >7 days': purging records older than 7 days...")
         try:

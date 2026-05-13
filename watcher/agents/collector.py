@@ -73,6 +73,12 @@ class CollectorAgent:
                 "fetched_at": entry.get("fetched_at"),
             }
 
+            # NEW: Check for Preferred Topic mapping
+            feeds_topics = config.get("feeds_topics", {})
+            f_url = entry.get("feed_url") or ""
+            if f_url in feeds_topics and feeds_topics[f_url] != "Auto":
+                item["forced_topic"] = feeds_topics[f_url]
+
             # YouTube Transcript Extraction Feature
             if config.get("enable_youtube_transcripts", False) and link:
                 if 'youtube.com' in link or 'youtu.be/' in link:

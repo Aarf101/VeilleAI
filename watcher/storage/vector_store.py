@@ -73,3 +73,19 @@ class VectorStore:
                 sims.append(sim)
             idxs = sorted(range(len(sims)), key=lambda i: sims[i], reverse=True)[:n_results]
             return [(self._ids[i], sims[i], self._metas[i]) for i in idxs]
+
+    def reset(self):
+        """Wipe all entries in the collection."""
+        if self._is_chroma:
+            try:
+                self.client.delete_collection(self.collection_name)
+            except:
+                pass
+            self.col = self.client.create_collection(
+                name=self.collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
+        else:
+            self._ids = []
+            self._vecs = []
+            self._metas = []

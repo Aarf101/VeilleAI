@@ -201,6 +201,15 @@ class Storage:
                     continue
             self.conn.commit()
 
+    def wipe_all(self):
+        """Clear both SQLite items and Vector Store entries."""
+        with self.lock:
+            cur = self.conn.cursor()
+            cur.execute("DELETE FROM items")
+            self.conn.commit()
+        if _VECTOR_STORE:
+            _VECTOR_STORE.reset()
+
     def get_entity_counts(self, since_iso: str, until_iso: str = None) -> list:
         """Return list of (entity_name, count) for mentions between since_iso and until_iso (ISO strings)."""
         with self.lock:

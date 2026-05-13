@@ -90,6 +90,14 @@ class SmartFilter:
             return False
     
     def match_article_to_topic(self, article, topic):
+        # NEW: Check for forced topic from feed configuration
+        forced = article.get('forced_topic')
+        if forced:
+            if forced == topic:
+                return True, 1.0, 'forced_override'
+            else:
+                return False, 0.0, 'forced_excluded'
+
         config_obj = getattr(self, 'config', {}) or {}
         blacklist = config_obj.get('topic_blacklist', [
             'smartphone', 'galaxy', 'iphone', 'samsung display',

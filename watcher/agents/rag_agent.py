@@ -54,8 +54,8 @@ def _get_langchain_llm(config: Dict[str, Any]):
                 return AIMessage(content=f"LangChain adapter for {provider} not natively supported in VeilleAI yet.")
         return OllamaFallback(model)
 
-def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 5) -> str:
-    """Uses LangChain and the Vector store to answer a query over stored articles."""
+def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 40, history: List[Dict[str, str]] = None) -> str:
+    """Uses LangChain and the Vector store to answer a query over stored articles with conversational memory."""
     if not _VECTOR_STORE or not _EMB_PROVIDER:
         return "RAG is not fully configured (missing Vector Store or Embeddings provider)."
     
@@ -87,27 +87,38 @@ def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 5) 
             title = art.get("title") or "Unknown Title"
             source = art.get("source") or "Unknown Source"
             date = art.get("published") or "Unknown Date"
-            # Prioritize content (which is now full text thanks to scrape!)
             text_body = art.get("content") or art.get("summary") or ""
-            # We can include a slightly longer text now since we're using LangChain
-            context_str += f"Document {i}:\nTitle: {title} (Source: {source}, Date: {date})\nBody: {text_body[:1500]}\n\n"
+            context_str += f"Document {i}:\nTitle: {title} (Source: {source}, Date: {date})\nBody: {text_body[:1000]}\n\n"
             
-        # 4. LangChain Prompt Template
-        prompt_template = ChatPromptTemplate.from_messages([
-            ("system", "You are an intelligent technical assistant for VeilleAI. You use the provided context to answer user questions.\n"
-                       "IMPORTANT: For every piece of information, news, or development you mention, you MUST explicitly include its publication date as found in the context.\n"
-                       "Context:\n{context}"),
-            ("human", "Question: {question}")
-        ])
+        # 4. Format History
+        history_msgs = []
+        if history:
+            for msg in history[-6:]: # Keep last 3 turns
+                role = "assistant" if msg["role"] == "assistant" else "human"
+                history_msgs.append((role, msg["content"]))
 
-        # 5. Build LangChain LLM Pipeline
+        # 5. LangChain Prompt Template
+        messages = [
+            ("system", "You are an intelligent technical assistant for VeilleAI. You use the provided context and conversation history to answer user questions.\n"
+                       "INSTRUCTIONS:\n"
+                       "1. DO NOT use 'Document X' or 'Document [number]' in your response. This is internal metadata only.\n"
+                       "2. For EVERY piece of information you provide, you MUST explicitly mention its Source and its Publication Date (e.g., 'According to WIRED (2026-05-12)...').\n"
+                       "3. If the user asks about a connection between entities, scan all context. If they aren't in the same article, summarize information for each from the context.\n"
+                       "Context:\n{context}")
+        ]
+        messages.extend(history_msgs)
+        messages.append(("human", "Question: {question}"))
+        
+        prompt_template = ChatPromptTemplate.from_messages(messages)
+
+        # 6. Build LangChain LLM Pipeline
         llm = _get_langchain_llm(config)
         output_parser = StrOutputParser()
         
         # LCEL logic: Prompt -> LLM -> Parser
         chain = prompt_template | llm | output_parser
         
-        # 6. Execute Chain
+        # 7. Execute Chain
         response = chain.invoke({
             "context": context_str,
             "question": query
@@ -116,4 +127,6 @@ def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 5) 
         return response
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return f"LangChain Error during RAG query: {str(e)}"
