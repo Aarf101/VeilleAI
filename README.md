@@ -19,7 +19,7 @@ Clone the repository and install the dependencies:
 
 **Mac/Linux:**
 ```bash
-git clone https://github.com/Aarf101/AgenticNotes.git
+git clone https://github.com/Aarf101/VeilleAI.git
 cd AgenticNotes
 python3 -m venv venv
 source venv/bin/activate
