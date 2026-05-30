@@ -72,7 +72,7 @@ feeds_weight:
   https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA: 1.7
   https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA: 0.4
   https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw: 1.6
-include_historical: false
+include_historical: true
 items_per_feed: 30
 llm_enabled: true
 max_articles_to_llm: 56
@@ -84,8 +84,8 @@ recency_boost: true
 relevance_threshold: 0.2
 schedule_fixed_hours:
 - '20:55'
-schedule_interval_minutes: 5
-schedule_mode: interval
+schedule_interval_minutes: 60
+schedule_mode: fixed_hour
 schedule_specific_datetime: 2026-04-13 21:00
 scheduler_frequency: 360
 sqlite_path: watcher.db
