@@ -42,7 +42,7 @@ feeds_enabled:
   https://techcrunch.com/feed/: false
   https://venturebeat.com/category/ai/feed/: false
   https://www.artificialintelligence-news.com/feed/: false
-  https://www.bleepingcomputer.com/feed/: false
+  https://www.bleepingcomputer.com/feed/: true
   https://www.technologyreview.com/feed/: false
   https://www.theverge.com/rss/index.xml: false
   https://www.wired.com/feed/rss: false

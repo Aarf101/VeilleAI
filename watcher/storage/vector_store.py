@@ -46,7 +46,15 @@ class VectorStore:
 
     def add(self, ids: List[str], embeddings: List[List[float]], metadatas: List[dict] | None = None):
         if self._is_chroma:
-            self.col.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
+            try:
+                self.col.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
+            except Exception:
+                # Refresh collection if it was deleted by another process
+                try:
+                    self.col = self.client.get_collection(name=self.collection_name)
+                    self.col.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
+                except Exception:
+                    pass
         else:
             for i, e in zip(ids, embeddings):
                 self._ids.append(i)
@@ -56,7 +64,15 @@ class VectorStore:
     def query(self, embedding: List[float], n_results: int = 50) -> List[Tuple[str, float, dict]]:
         """Return list of (id, score, metadata) ordered by descending similarity."""
         if self._is_chroma:
-            n_res = min(n_results, self.col.count())
+            try:
+                n_res = min(n_results, self.col.count())
+            except Exception:
+                # Refresh collection if it was deleted by another process
+                try:
+                    self.col = self.client.get_collection(name=self.collection_name)
+                except Exception:
+                    return []
+                n_res = min(n_results, self.col.count())
             if n_res == 0:
                 return []
             res = self.col.query(query_embeddings=[embedding], n_results=n_res)
