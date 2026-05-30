@@ -662,90 +662,94 @@ if "Dashboard" in page:
 </div>
 """, unsafe_allow_html=True)
 
-    # Intelligence Reports full-width
-    st.markdown('<div class="v-card"><span class="card-title">Intelligence Reports</span>', unsafe_allow_html=True)
-    
-    reports_dir = Path("reports")
-    if reports_dir.exists() and reports_dir.is_dir():
-        # Type hint correctly for Pyre
-        reports_iter = reports_dir.glob("*.md")
-        reports_list = [p for p in reports_iter]
-        reports_list.sort(key=lambda p: os.path.getmtime(str(p)), reverse=True)
+    @st.fragment(run_every="60s")
+    def render_auto_updating_dashboard_sections():
+        # Intelligence Reports full-width
+        st.markdown('<div class="v-card"><span class="card-title">Intelligence Reports</span>', unsafe_allow_html=True)
         
-        if not reports_list:
-            st.markdown('<div style="text-align:center; padding:2rem; color:#4b5563;"><span>📄</span><br/>No reports generated yet.</div>', unsafe_allow_html=True)
-        else:
-            from collections import defaultdict
-            topic_reports = defaultdict(list)
-            for rp in reports_list:
-                parts = rp.stem.split('_')
-                t_name = parts[-1] if len(parts) >= 4 else "Global"
-                topic_reports[t_name].append(rp)
-                
-            for topic, r_list in topic_reports.items():
-                st.markdown(f'<div class="card-title mt-2" style="color:var(--accent-blue-light); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.25rem;">Topic: {topic}</div>', unsafe_allow_html=True)
-                for report_path in r_list[:3]:
-                    try:
-                        str_path = str(report_path)
-                        mtime = os.path.getmtime(str_path)
-                        from datetime import datetime
-                        dt = datetime.fromtimestamp(mtime).strftime('%B %d, %Y - %H:%M')
-                        title = report_path.stem.replace('_', ' ').title()
-                        
-                        st.markdown(f"""
-<div class="report-row">
-    <div>
-        <div class="report-date">{dt}</div>
-        <div class="report-title">{title}</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-                        
-                        d1, d2, d3, d4, d5, d6 = st.columns([4, 1, 1, 1, 1, 1])
-                        with open(report_path, "r", encoding="utf-8") as f:
-                            md_str = f.read()
+        reports_dir = Path("reports")
+        if reports_dir.exists() and reports_dir.is_dir():
+            # Type hint correctly for Pyre
+            reports_iter = reports_dir.glob("*.md")
+            reports_list = [p for p in reports_iter]
+            reports_list.sort(key=lambda p: os.path.getmtime(str(p)), reverse=True)
+            
+            if not reports_list:
+                st.markdown('<div style="text-align:center; padding:2rem; color:#4b5563;"><span>📄</span><br/>No reports generated yet.</div>', unsafe_allow_html=True)
+            else:
+                from collections import defaultdict
+                topic_reports = defaultdict(list)
+                for rp in reports_list:
+                    parts = rp.stem.split('_')
+                    t_name = parts[-1] if len(parts) >= 4 else "Global"
+                    topic_reports[t_name].append(rp)
+                    
+                for topic, r_list in topic_reports.items():
+                    st.markdown(f'<div class="card-title mt-2" style="color:var(--accent-blue-light); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.25rem;">Topic: {topic}</div>', unsafe_allow_html=True)
+                    for report_path in r_list[:3]:
+                        try:
+                            str_path = str(report_path)
+                            mtime = os.path.getmtime(str_path)
+                            from datetime import datetime
+                            dt = datetime.fromtimestamp(mtime).strftime('%B %d, %Y - %H:%M')
+                            title = report_path.stem.replace('_', ' ').title()
                             
-                        pdf_bytes = generate_pdf_bytes(md_str)
-                        docx_bytes = generate_docx_bytes(md_str)
+                            st.markdown(f"""
+    <div class="report-row">
+        <div>
+            <div class="report-date">{dt}</div>
+            <div class="report-title">{title}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+                            
+                            d1, d2, d3, d4, d5, d6 = st.columns([4, 1, 1, 1, 1, 1])
+                            with open(report_path, "r", encoding="utf-8") as f:
+                                md_str = f.read()
+                                
+                            pdf_bytes = generate_pdf_bytes(md_str)
+                            docx_bytes = generate_docx_bytes(md_str)
 
-                        with d2:
-                            st.download_button("↓ MD", md_str.encode("utf-8"), file_name=report_path.name, key=f"md_{report_path.name}")
-                        with d3:
-                            pdf_name = report_path.name.replace(".md", ".pdf")
-                            st.download_button("↓ PDF", pdf_bytes, file_name=pdf_name, key=f"pdf_{report_path.name}", mime="application/pdf", disabled=len(pdf_bytes)==0)
-                        with d4:
-                            docx_name = report_path.name.replace(".md", ".docx")
-                            st.download_button("↓ DOCX", docx_bytes, file_name=docx_name, key=f"docx_{report_path.name}", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", disabled=len(docx_bytes)==0)
-                        
-                        audio_path = report_path.with_suffix(".mp3")
-                        if audio_path.exists():
-                            with d5:
-                                with open(audio_path, "rb") as af:
-                                    audio_bytes = af.read()
-                                st.download_button("↓ MP3", audio_bytes, file_name=audio_path.name, key=f"mp3_{report_path.name}", mime="audio/mpeg")
-                            with d6:
-                                if st.button("🔊", key=f"play_dash_{report_path.name}"):
-                                    st.audio(audio_path)
-                    except Exception as e:
-                        st.error(f"Error loading report {report_path.name}: {e}")
-    else:
-         st.markdown('<div style="text-align:center; padding:2rem; color:#4b5563;"><span>📁</span><br/>Reports directory not found.</div>', unsafe_allow_html=True)
-         
-    st.markdown('</div>', unsafe_allow_html=True)
+                            with d2:
+                                st.download_button("↓ MD", md_str.encode("utf-8"), file_name=report_path.name, key=f"md_{report_path.name}")
+                            with d3:
+                                pdf_name = report_path.name.replace(".md", ".pdf")
+                                st.download_button("↓ PDF", pdf_bytes, file_name=pdf_name, key=f"pdf_{report_path.name}", mime="application/pdf", disabled=len(pdf_bytes)==0)
+                            with d4:
+                                docx_name = report_path.name.replace(".md", ".docx")
+                                st.download_button("↓ DOCX", docx_bytes, file_name=docx_name, key=f"docx_{report_path.name}", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", disabled=len(docx_bytes)==0)
+                            
+                            audio_path = report_path.with_suffix(".mp3")
+                            if audio_path.exists():
+                                with d5:
+                                    with open(audio_path, "rb") as af:
+                                        audio_bytes = af.read()
+                                    st.download_button("↓ MP3", audio_bytes, file_name=audio_path.name, key=f"mp3_{report_path.name}", mime="audio/mpeg")
+                                with d6:
+                                    if st.button("🔊", key=f"play_dash_{report_path.name}"):
+                                        st.audio(audio_path)
+                        except Exception as e:
+                            st.error(f"Error loading report {report_path.name}: {e}")
+        else:
+             st.markdown('<div style="text-align:center; padding:2rem; color:#4b5563;"><span>📁</span><br/>Reports directory not found.</div>', unsafe_allow_html=True)
+             
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Recent articles directly on Dashboard
-    st.markdown('<div class="v-card"><span class="card-title">Recent Articles</span>', unsafe_allow_html=True)
-    recent_dashboard_articles = get_recent_dashboard_articles(limit=8)
-    if not recent_dashboard_articles:
-        st.info("No articles found in database.")
-    else:
-        for title, source, pub, summary in recent_dashboard_articles:
-            safe_title = title or "Untitled"
-            safe_source = source or "Unknown source"
-            safe_pub = pub or "Unknown date"
-            with st.expander(f"{safe_title} - {safe_source} ({safe_pub})"):
-                st.write(summary if summary else "No summary available.")
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Recent articles directly on Dashboard
+        st.markdown('<div class="v-card"><span class="card-title">Recent Articles</span>', unsafe_allow_html=True)
+        recent_dashboard_articles = get_recent_dashboard_articles(limit=8)
+        if not recent_dashboard_articles:
+            st.info("No articles found in database.")
+        else:
+            for title, source, pub, summary in recent_dashboard_articles:
+                safe_title = title or "Untitled"
+                safe_source = source or "Unknown source"
+                safe_pub = pub or "Unknown date"
+                with st.expander(f"{safe_title} - {safe_source} ({safe_pub})"):
+                    st.write(summary if summary else "No summary available.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    render_auto_updating_dashboard_sections()
 
 
 elif "Run Pipeline" in page:
