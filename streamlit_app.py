@@ -1861,6 +1861,15 @@ Total articles:    {article_count}""", language="text")
 
 elif "Monitoring" in page:
     db_path = config.get('sqlite_path', 'watcher.db')
+    
+    # Ensure tables exist
+    try:
+        from watcher.storage.store import Storage
+        s = Storage(db_path)
+        s.close()
+    except Exception:
+        pass
+
     try:
         import sqlite3
         with sqlite3.connect(db_path) as conn:
