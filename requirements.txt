@@ -16,6 +16,7 @@ torch>=2.2.0; platform_system != "Darwin"
 langchain>=0.1.0
 langchain-groq>=0.1.0
 langchain-core>=0.1.0
+google-genai>=1.0.0
 # Optional UI/export
 streamlit>=1.20
 reportlab>=4.0

@@ -1,9 +1,51 @@
 import os
 import sqlite3
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Optional
+
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
 from watcher.storage.store import _VECTOR_STORE, _EMB_PROVIDER
+
+
+def _escape_langchain_braces(text: str) -> str:
+    """Escape { } so LangChain prompt templates don't treat article/history text as variables."""
+    if not text:
+        return ""
+    return text.replace("{", "{{").replace("}", "}}")
+
+
+class _GeminiChatModel(BaseChatModel):
+    """LangChain-compatible Gemini wrapper using google-genai."""
+
+    model_name: str = "gemini-2.0-flash"
+    api_key: Optional[str] = None
+
+    @property
+    def _llm_type(self) -> str:
+        return "gemini"
+
+    def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        import importlib
+
+        genai = importlib.import_module("google.genai")
+        client = genai.Client(api_key=self.api_key or os.environ.get("GEMINI_API_KEY"))
+        prompt = "\n".join(getattr(m, "content", str(m)) for m in messages)
+        resp = client.models.generate_content(model=self.model_name, contents=prompt)
+        text = getattr(resp, "text", None) or ""
+        message = AIMessage(content=text)
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
 
 def _get_langchain_llm(config: Dict[str, Any]):
     """Helper to instantiate the appropriate LangChain ChatModel based on config."""
@@ -17,23 +59,19 @@ def _get_langchain_llm(config: Dict[str, Any]):
     model = get_config_value(config, 'model', 'api_model', default='')
     
     if provider == 'gemini':
-        # Use the newest langchain google wrapper if installed, or fallback
-        from langchain_core.messages import HumanMessage
-        class GeminiFallback:
-            def __init__(self, m):
-                import importlib
-                self.genai = importlib.import_module('google.genai')
-                self.api_key = os.environ.get('GEMINI_API_KEY')
-                self.client = self.genai.Client(api_key=self.api_key)
-                self.model = m or 'gemini-2.0-flash'
-            def invoke(self, messages):
-                if isinstance(messages, list):
-                    prompt = "\n".join([m.content for m in messages])
-                else: prompt = str(messages.to_string())
-                resp = self.client.models.generate_content(model=self.model, contents=prompt)
-                from langchain_core.messages import AIMessage
-                return AIMessage(content=resp.text)
-        return GeminiFallback(model)
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
+            return ChatGoogleGenerativeAI(
+                model=model or "gemini-2.0-flash",
+                google_api_key=os.environ.get("GEMINI_API_KEY"),
+                temperature=0.3,
+            )
+        except ImportError:
+            return _GeminiChatModel(
+                model_name=model or "gemini-2.0-flash",
+                api_key=os.environ.get("GEMINI_API_KEY"),
+            )
         
     elif provider == 'groq':
         from langchain_groq import ChatGroq
@@ -93,9 +131,9 @@ def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 40,
         # 4. Format History
         history_msgs = []
         if history:
-            for msg in history[-6:]: # Keep last 3 turns
+            for msg in history[-6:]:  # Keep last 3 turns
                 role = "assistant" if msg["role"] == "assistant" else "human"
-                history_msgs.append((role, msg["content"]))
+                history_msgs.append((role, _escape_langchain_braces(msg["content"])))
 
         # 5. LangChain Prompt Template
         messages = [
@@ -120,8 +158,8 @@ def query_rag(query: str, config: Dict[str, Any], db_path: str, top_k: int = 40,
         
         # 7. Execute Chain
         response = chain.invoke({
-            "context": context_str,
-            "question": query
+            "context": _escape_langchain_braces(context_str),
+            "question": _escape_langchain_braces(query),
         })
         
         return response
