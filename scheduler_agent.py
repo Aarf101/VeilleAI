@@ -47,6 +47,9 @@ class SchedulerAgent:
 
     def run_once(self) -> Optional[dict]:
         """Run a single end-to-end orchestration cycle."""
+        # Reload config from disk to pick up any new sources or topics added via the UI
+        self.config = self.load_config()
+        
         print("\n" + "=" * 80)
         print(
             f"[SchedulerAgent] Starting pipeline run at "
