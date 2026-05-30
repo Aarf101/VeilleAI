@@ -1,3 +1,5 @@
+import watcher.compat_sgmllib  # noqa: F401 — must run before feedparser on Python 3.13+
+
 import feedparser
 import requests
 import xml.etree.ElementTree as ET
@@ -101,8 +103,6 @@ def fetch_feed_with_timeout(url, timeout=10):
     except Exception as e:
         logger.warning(f"SKIPPED feed {url}: {e}")
         return None
-
-import feedparser
 
 def fetch_rss(feed_url: str, max_items: int = 10) -> list[dict]:
     content = fetch_feed_with_timeout(feed_url, timeout=10)

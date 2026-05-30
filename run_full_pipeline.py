@@ -21,17 +21,10 @@ def load_env_file():
 
 load_env_file()  # call this FIRST before anything else
 
-import sys
-try:
-    import sgmllib
-except ImportError:
-    try:
-        import sgmllib3k as sgmllib
-        sys.modules['sgmllib'] = sgmllib
-    except ImportError:
-        pass
+import watcher.compat_sgmllib  # noqa: F401 — feedparser needs sgmllib on Python 3.13+
 
 import io
+import sys
 
 sys.stdout = io.TextIOWrapper(
     sys.stdout.buffer, 
