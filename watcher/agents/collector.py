@@ -231,57 +231,64 @@ class CollectorAgent:
         do_youtube = config.get("enable_youtube_transcripts", False)
         
         if do_news or do_youtube:
+            import time
             logger.info("Autonomous Web Search enabled: Searching topics...")
             try:
-                from ddgs import DDGS
-                with DDGS() as ddgs:
-                    topics = config.get("topics", [])
-                    for t in topics:
-                        t_name = t.get('name', t) if isinstance(t, dict) else t
-                        
-                        if do_youtube:
-                            logger.info(f"Searching YouTube videos for: {t_name}")
-                            try:
-                                video_results = list(ddgs.videos(f"{t_name} news recent", max_results=5))
-                                for vres in video_results:
-                                    if 'youtube.com' in vres.get("content", ""):
+                try:
+                    from duckduckgo_search import DDGS
+                except ImportError:
+                    logger.error("duckduckgo-search is not installed. Please run: pip install duckduckgo-search")
+                    DDGS = None
+                
+                if DDGS:
+                    with DDGS() as ddgs:
+                        topics = config.get("topics", [])
+                        for t in topics:
+                            t_name = t.get('name', t) if isinstance(t, dict) else t
+                            
+                            if do_youtube:
+                                logger.info(f"Searching YouTube videos for: {t_name}")
+                                try:
+                                    video_results = list(ddgs.videos(f"{t_name} news recent", max_results=5))
+                                    for vres in video_results:
+                                        if 'youtube.com' in vres.get("content", ""):
+                                            from datetime import datetime
+                                            video_entry = {
+                                                "title": vres.get("title", ""),
+                                                "link": vres.get("content", ""), # DDGS puts the URL in 'content' for videos
+                                                "published": vres.get("published", datetime.utcnow().isoformat()),
+                                                "summary": vres.get("description", ""),
+                                                "source": vres.get("uploader", "YouTube"),
+                                                "fetched_at": datetime.utcnow().isoformat()
+                                            }
+                                            _process_entry(video_entry)
+                                except Exception as ve:
+                                    logger.warning(f"DuckDuckGo video search failed for {t_name}: {ve}")
+                                    
+                            if do_news:
+                                search_query = f"{t_name} news"
+                                logger.info(f"Searching web for: {search_query}")
+                                try:
+                                    # Get top 5 news articles per topic
+                                    results = list(ddgs.news(search_query, max_results=5))
+                                    for res in results:
                                         from datetime import datetime
-                                        video_entry = {
-                                            "title": vres.get("title", ""),
-                                            "link": vres.get("content", ""), # DDGS puts the URL in 'content' for videos
-                                            "published": vres.get("published", datetime.utcnow().isoformat()),
-                                            "summary": vres.get("description", ""),
-                                            "source": vres.get("uploader", "YouTube"),
+                                        # DDG News returns: title, url, source, date, body
+                                        entry = {
+                                            "title": res.get("title", ""),
+                                            "link": res.get("url", ""),
+                                            "published": res.get("date", datetime.utcnow().isoformat()),
+                                            "summary": res.get("body", ""),
+                                            "source": res.get("source", "DuckDuckGo Search"),
                                             "fetched_at": datetime.utcnow().isoformat()
                                         }
-                                        _process_entry(video_entry)
-                            except Exception as ve:
-                                logger.warning(f"DuckDuckGo video search failed for {t_name}: {ve}")
-                                
-                        if do_news:
-                            search_query = f"{t_name} news"
-                            logger.info(f"Searching web for: {search_query}")
-                            try:
-                                # Get top 5 news articles per topic
-                                results = list(ddgs.news(search_query, max_results=5))
-                                for res in results:
-                                    from datetime import datetime
-                                    # DDG News returns: title, url, source, date, body
-                                    entry = {
-                                        "title": res.get("title", ""),
-                                        "link": res.get("url", ""),
-                                        "published": res.get("date", datetime.utcnow().isoformat()),
-                                        "summary": res.get("body", ""),
-                                        "source": res.get("source", "DuckDuckGo Search"),
-                                        "fetched_at": datetime.utcnow().isoformat()
-                                    }
-                                    _process_entry(entry)
-                            except Exception as pe:
-                                logger.warning(f"DuckDuckGo news search failed for {t_name}: {pe}")
+                                        _process_entry(entry)
+                                except Exception as pe:
+                                    logger.warning(f"DuckDuckGo news search failed for {t_name}: {pe}")
 
-                        # Small delay to respect rate limits if many topics
-                        if len(topics) > 3:
-                            time.sleep(0.5)
+                            # Small delay to respect rate limits if many topics
+                            if len(topics) > 3:
+                                time.sleep(0.5)
             except Exception as e:
                 logger.error(f"DuckDuckGo search failed: {e}")
 
