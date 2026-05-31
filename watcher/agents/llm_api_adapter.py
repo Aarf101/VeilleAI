@@ -95,6 +95,19 @@ class APILLMAdapter:
         
         provider_info = self.PROVIDERS[self.provider]
         
+        # Ensure .env is loaded
+        from pathlib import Path
+        env_file = Path(".env")
+        if env_file.exists():
+            with open(env_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        k, v = line.split('=', 1)
+                        k, v = k.strip(), v.strip()
+                        if k not in os.environ:
+                            os.environ[k] = v
+
         # Set model
         self.model = model or provider_info['models'][0]
         

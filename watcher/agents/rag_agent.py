@@ -49,6 +49,19 @@ class _GeminiChatModel(BaseChatModel):
 
 def _get_langchain_llm(config: Dict[str, Any]):
     """Helper to instantiate the appropriate LangChain ChatModel based on config."""
+    # Ensure .env is loaded (especially important when running via Streamlit UI)
+    from pathlib import Path
+    env_file = Path(".env")
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    k, v = k.strip(), v.strip()
+                    if k not in os.environ:
+                        os.environ[k] = v
+
     def get_config_value(cfg, *keys, default=''):
         for key in keys:
             if key in cfg and cfg[key]:
@@ -75,12 +88,14 @@ def _get_langchain_llm(config: Dict[str, Any]):
         
     elif provider == 'groq':
         from langchain_groq import ChatGroq
-        api_key = os.environ.get('GROQ_API_KEY', '')
-        return ChatGroq(
-            api_key=api_key,
-            model_name=model or "mixtral-8x7b-32768",
-            temperature=0.3
-        )
+        api_key = os.environ.get('GROQ_API_KEY')
+        kwargs = {
+            "model_name": model or "mixtral-8x7b-32768",
+            "temperature": 0.3
+        }
+        if api_key:
+            kwargs["api_key"] = api_key
+        return ChatGroq(**kwargs)
     else:
         # Default/Fallback to Ollama
         from langchain_core.messages import AIMessage
