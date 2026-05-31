@@ -48,9 +48,14 @@ class VectorStore:
         if self._is_chroma:
             try:
                 self.col.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
-            except Exception:
-                # Refresh collection if it was deleted by another process
+            except Exception as e:
+                # Refresh entire client and collection if it was deleted by another process
+                import logging
+                logging.getLogger(__name__).warning(f"ChromaDB add failed, re-initializing client: {e}")
                 try:
+                    if self.persist_directory:
+                        import chromadb
+                        self.client = chromadb.PersistentClient(path=self.persist_directory)
                     self.col = self.client.get_collection(name=self.collection_name)
                     self.col.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
                 except Exception:
@@ -64,22 +69,30 @@ class VectorStore:
     def query(self, embedding: List[float], n_results: int = 50) -> List[Tuple[str, float, dict]]:
         """Return list of (id, score, metadata) ordered by descending similarity."""
         if self._is_chroma:
+            def _try_query(col, max_res):
+                n = min(max_res, col.count())
+                if n == 0: return []
+                res = col.query(query_embeddings=[embedding], n_results=n)
+                ids = res["ids"][0]
+                dists = res.get("distances") and res.get("distances")[0]
+                metadatas = res.get("metadatas") and res.get("metadatas")[0]
+                return list(zip(ids, dists or [0] * len(ids), metadatas or [{}] * len(ids)))
+
             try:
-                n_res = min(n_results, self.col.count())
-            except Exception:
-                # Refresh collection if it was deleted by another process
+                return _try_query(self.col, n_results)
+            except Exception as e:
+                # Refresh entire client and collection if it was corrupted/deleted on disk
+                import logging
+                logging.getLogger(__name__).warning(f"ChromaDB query failed, re-initializing client: {e}")
                 try:
+                    if self.persist_directory:
+                        # Re-instantiate the client completely
+                        import chromadb
+                        self.client = chromadb.PersistentClient(path=self.persist_directory)
                     self.col = self.client.get_collection(name=self.collection_name)
+                    return _try_query(self.col, n_results)
                 except Exception:
                     return []
-                n_res = min(n_results, self.col.count())
-            if n_res == 0:
-                return []
-            res = self.col.query(query_embeddings=[embedding], n_results=n_res)
-            ids = res["ids"][0]
-            dists = res.get("distances") and res.get("distances")[0]
-            metadatas = res.get("metadatas") and res.get("metadatas")[0]
-            return list(zip(ids, dists or [0] * len(ids), metadatas or [{}] * len(ids)))
         else:
             emb = np.array(embedding)
             sims = []
