@@ -55,6 +55,8 @@ class VectorStore:
                 try:
                     if self.persist_directory:
                         import chromadb
+                        if hasattr(chromadb.api.client.SharedSystemClient, 'clear_system_cache'):
+                            chromadb.api.client.SharedSystemClient.clear_system_cache()
                         self.client = chromadb.PersistentClient(path=self.persist_directory)
                     self.col = self.client.get_collection(name=self.collection_name)
                     self.col.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
@@ -69,6 +71,17 @@ class VectorStore:
     def query(self, embedding: List[float], n_results: int = 50) -> List[Tuple[str, float, dict]]:
         """Return list of (id, score, metadata) ordered by descending similarity."""
         if self._is_chroma:
+            # Force refresh to fix multi-process staleness (Win11/Linux) where Streamlit doesn't see new background data
+            if self.persist_directory:
+                try:
+                    import chromadb
+                    if hasattr(chromadb.api.client.SharedSystemClient, 'clear_system_cache'):
+                        chromadb.api.client.SharedSystemClient.clear_system_cache()
+                    self.client = chromadb.PersistentClient(path=self.persist_directory)
+                    self.col = self.client.get_collection(name=self.collection_name)
+                except Exception:
+                    pass
+
             def _try_query(col, max_res):
                 n = min(max_res, col.count())
                 if n == 0: return []
@@ -88,6 +101,8 @@ class VectorStore:
                     if self.persist_directory:
                         # Re-instantiate the client completely
                         import chromadb
+                        if hasattr(chromadb.api.client.SharedSystemClient, 'clear_system_cache'):
+                            chromadb.api.client.SharedSystemClient.clear_system_cache()
                         self.client = chromadb.PersistentClient(path=self.persist_directory)
                     self.col = self.client.get_collection(name=self.collection_name)
                     return _try_query(self.col, n_results)
